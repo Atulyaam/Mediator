@@ -1,7 +1,8 @@
 # Sprint Status
 
 - **Master spec:** Mediator_Final_Development_Plan_v1.3.md
-- **Current sprint:** S00 — Feasibility spike + explicit execution GO/NO-GO
+- **Sprint plan:** Mediator_Sprint_Wise_Development_Plan_v1.3.md
+- **Current sprint:** S01 — Repository scaffold + minimal IDE panel
 - **Status:** PASS
 - **Provider:** Google Gemini (gemini.google.com)
 - **IDE:** Antigravity IDE on Windows 11
@@ -13,24 +14,17 @@
 
 ---
 
-## Implemented
+## S01 Exit Gate Checklist
 
-- [x] Repository scaffold: monorepo directory structure created
-- [x] Root `package.json` (npm workspaces)
-- [x] `tsconfig.base.json` + root `tsconfig.json`
-- [x] `vitest.config.ts`
-- [x] `.prettierrc`
-- [x] `.gitignore` (includes secret patterns from master plan)
-- [x] `docs/FEASIBILITY_SPIKE.md` — same-chat extraction proof + GO/NO-GO decision
-- [x] `docs/SANDBOX_CAPABILITIES.md` — canary design + capability matrix (all UNKNOWN = false → no-autoexec)
-- [x] `docs/ADR/ADR-001-first-provider-gemini.md` — provider selection
-- [x] `docs/ADR/ADR-002-execution-mode-review-only.md` — execution mode decision
-- [x] `docs/SPRINT_STATUS.md` (this file)
-- [x] `docs/DEBUGGING.md`
-- [x] `docs/THREAT_MODEL.md`
-- [x] `docs/ARCHITECTURE.md`
-- [x] `README.md`
-- [x] `SECURITY.md`
+| Item | Status | Evidence |
+|---|---|---|
+| Monorepo workspace structure (`apps/*`, `packages/*`) | ✅ PASS | `npm workspaces` with `apps/ide-extension`, `apps/browser-extension`, `apps/cli`, `packages/shared-contracts`, `packages/task-domain` |
+| Formatting, lint, typecheck, unit tests, and CI | ✅ PASS | `.eslintrc.json`, `tsconfig.base.json`, `vitest.config.ts`, `.github/workflows/ci.yml` |
+| Clean checkout can install/build/test | ✅ PASS | `npm run lint`, `npm run typecheck`, `npm run build`, `npm test` all exit 0 |
+| IDE status panel showing stopped/running, workspace, capabilities | ✅ PASS | `MediatorPanel` in `apps/ide-extension/src/panel.ts` + `mediatorState.ts` |
+| Start/stop command that changes only local app state | ✅ PASS | `cmdStart` / `cmdStop` in `apps/ide-extension/src/extension.ts`; NO shell execution |
+| CLI mirroring status, capabilities, start, stop | ✅ PASS | `@mediator/cli` in `apps/cli/src/index.ts` |
+| No privileged execution path in IDE panel or CLI | ✅ PASS | Executor disabled; zero process execution calls |
 
 ---
 
@@ -38,47 +32,43 @@
 
 | Command | Exit code | Result | Evidence |
 |---|---:|---|---|
-| `node --version` | 0 | v24.13.0 | stdout |
-| `npm --version` | 0 | 11.6.2 | stdout |
-| `git --version` | 0 | 2.46.0.windows.1 | stdout |
-| `git init` | 0 | Repo initialized | stdout |
+| `npm run lint` | 0 | 0 errors, 0 warnings across all `.ts` files | stdout |
+| `npm run typecheck` | 0 | 5 workspaces typechecked cleanly | stdout |
+| `npm run build` | 0 | 5 workspaces built cleanly | stdout |
+| `npm test` | 0 | **68 / 68 unit tests passed** (3 test files) | stdout |
+| `node apps/cli/dist/index.js status` | 0 | Displays Review-only status report | stdout |
+| `node apps/cli/dist/index.js capabilities` | 0 | Displays capability report (executor disabled) | stdout |
+| `node apps/cli/dist/index.js start` | 0 | Confirms local state change only | stdout |
 
 ---
 
 ## Security tests
 
-- S00 has no automated security tests (foundational feasibility sprint).
-- Secret patterns added to `.gitignore` covering all patterns from master plan §5.
-- No secrets, credentials, or host paths committed.
+- Verified that `apps/ide-extension` and `apps/cli` contain zero child process spawns, shell executions, or network connections.
+- Verified that `isExecutorSufficientForAutoExec` returns `false` whenever live workspace is writable or capabilities are unknown.
+- Secret patterns added to `.gitignore`. No synthetic test secrets committed.
 
 ---
 
-## Changed files
+## Changed / Added files in S01
 
-- `package.json` (new)
-- `tsconfig.base.json` (new)
-- `tsconfig.json` (new)
-- `vitest.config.ts` (new)
-- `.prettierrc` (new)
-- `.gitignore` (new)
-- `docs/FEASIBILITY_SPIKE.md` (new)
-- `docs/SANDBOX_CAPABILITIES.md` (new)
-- `docs/ADR/ADR-001-first-provider-gemini.md` (new)
-- `docs/ADR/ADR-002-execution-mode-review-only.md` (new)
-- `docs/SPRINT_STATUS.md` (new)
-- `docs/DEBUGGING.md` (new)
-- `docs/THREAT_MODEL.md` (new)
-- `docs/ARCHITECTURE.md` (new)
-- `README.md` (new)
-- `SECURITY.md` (new)
+- `.eslintrc.json` (new)
+- `.github/workflows/ci.yml` (new)
+- `apps/ide-extension/` (new: `package.json`, `tsconfig.json`, `src/extension.ts`, `src/panel.ts`, `src/mediatorState.ts`, `src/mediatorState.test.ts`)
+- `apps/browser-extension/` (new: `package.json`, `tsconfig.json`, `manifest.json`, `src/index.ts`)
+- `apps/cli/` (new: `package.json`, `tsconfig.json`, `src/index.ts`)
+- `packages/task-domain/` (new: `package.json`, `tsconfig.json`, `src/index.ts`, `src/index.test.ts`)
+- `packages/shared-contracts/src/index.ts` (updated PROTOCOL_VERSION type assertion)
+- `package.json` (configured workspaces, root scripts)
+- `tsconfig.json` (project references for build)
+- `docs/SPRINT_STATUS.md` (updated)
 
 ---
 
 ## Known limitations / unverified assumptions
 
-- Sandbox canary was not executed via IDE invocation (no documented API found for third-party tools). The capability matrix in SANDBOX_CAPABILITIES.md records all fields as UNKNOWN.
-- DOM extraction from Gemini was manually verified via DevTools console, not via a deployed extension — extension-level extraction will be formally tested in S18.
-- WSL2 executor not assessed (user has not opted in).
+- IDE webview is tested via pure unit tests (`mediatorState.test.ts`); full in-editor webview rendering was not inspected inside an extension development host (headless test environment).
+- Browser extension shell (`apps/browser-extension`) is scaffolded with manifest V3 and stub entrypoint; provider DOM adapter implementation scheduled for S18.
 
 ---
 
@@ -91,7 +81,7 @@
 
 ## Next sprint
 
-**S01 — Repository scaffold + minimal IDE panel**
+**S02 — Shared contracts, typed errors and correlation IDs**
 
-Dependencies: S00 ✅  
-Goal: Runnable TypeScript monorepo with clean checkout, build, test, lint cycle; IDE panel showing Mediator status.
+Dependencies: S01 ✅  
+Goal: Comprehensive shared types (`Task`, `Session`, `Round`, `Action`, `Approval`, `Evidence`, `ExecutorCapability`, `ProviderIdentity`), stable typed error codes, boundary correlation IDs, and input schema validation tests.

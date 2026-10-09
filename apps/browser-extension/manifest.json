@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "name": "Mediator AI Bridge",
+  "version": "0.0.1",
+  "description": "Bridge local IDE workspace to same-chat browser AI sessions.",
+  "permissions": [
+    "activeTab",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://gemini.google.com/*"
+  ]
+}

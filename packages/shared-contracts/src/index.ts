@@ -8,7 +8,7 @@
 
 // ─── Protocol version ──────────────────────────────────────────────────────
 
-export const PROTOCOL_VERSION = '1.3' as const;
+export const PROTOCOL_VERSION = '1.3';
 export type ProtocolVersion = typeof PROTOCOL_VERSION;
 
 // ─── Stable error codes ────────────────────────────────────────────────────

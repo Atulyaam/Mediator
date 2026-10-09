@@ -1,0 +1,17 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "tsBuildInfoFile": "./dist/.tsbuildinfo",
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "lib": ["ES2022"]
+  },
+  "references": [
+    { "path": "../../packages/shared-contracts" },
+    { "path": "../../packages/task-domain" }
+  ],
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "src/**/*.test.ts"]
+}

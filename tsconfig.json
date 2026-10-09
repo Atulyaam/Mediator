@@ -3,11 +3,8 @@
   "references": [
     { "path": "./packages/shared-contracts" },
     { "path": "./packages/task-domain" },
-    { "path": "./packages/policy-engine" },
-    { "path": "./packages/workspace-boundary" },
-    { "path": "./packages/stage-store" },
-    { "path": "./packages/context-engine" },
-    { "path": "./packages/orchestrator" },
-    { "path": "./apps/cli" }
+    { "path": "./apps/cli" },
+    { "path": "./apps/ide-extension" },
+    { "path": "./apps/browser-extension" }
   ]
 }

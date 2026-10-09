@@ -1,0 +1,60 @@
+{
+  "name": "mediator-ide-extension",
+  "displayName": "Mediator",
+  "description": "Connect your AI conversation to your local workspace. Review-only mode — diffs, approvals, and manual handoff.",
+  "version": "0.0.1",
+  "private": true,
+  "publisher": "mediator-dev",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": ["Other"],
+  "activationEvents": ["onStartupFinished"],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "mediator.start",
+        "title": "Mediator: Start",
+        "category": "Mediator"
+      },
+      {
+        "command": "mediator.stop",
+        "title": "Mediator: Stop",
+        "category": "Mediator"
+      },
+      {
+        "command": "mediator.showPanel",
+        "title": "Mediator: Show Status Panel",
+        "category": "Mediator"
+      },
+      {
+        "command": "mediator.showCapabilities",
+        "title": "Mediator: Show Capabilities",
+        "category": "Mediator"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        { "command": "mediator.start" },
+        { "command": "mediator.stop" },
+        { "command": "mediator.showPanel" },
+        { "command": "mediator.showCapabilities" }
+      ]
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "test": "echo 'IDE extension tests run via root vitest'",
+    "clean": "rimraf dist *.tsbuildinfo"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "typescript": "*"
+  },
+  "dependencies": {
+    "@mediator/shared-contracts": "*",
+    "@mediator/task-domain": "*"
+  }
+}
