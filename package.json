@@ -9,11 +9,11 @@
     "packages/provider-adapters/*"
   ],
   "scripts": {
-    "build": "npm run build --workspaces --if-present",
+    "build": "tsc -b",
     "test": "vitest run",
     "lint": "eslint . --ext .ts",
-    "typecheck": "npm run typecheck --workspaces --if-present",
-    "clean": "npm run clean --workspaces --if-present"
+    "typecheck": "tsc -b",
+    "clean": "tsc -b --clean"
   },
   "engines": {
     "node": ">=20.0.0",
