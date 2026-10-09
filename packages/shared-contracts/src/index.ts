@@ -26,6 +26,14 @@ export const ErrorCode = {
   PATH_SYMLINK_ESCAPE: 'PATH_SYMLINK_ESCAPE',
   PATH_CLOUD_PLACEHOLDER: 'PATH_CLOUD_PLACEHOLDER',
   WORKSPACE_ROOT_UNCONFIRMED: 'WORKSPACE_ROOT_UNCONFIRMED',
+  WORKSPACE_NOT_SELECTED: 'WORKSPACE_NOT_SELECTED',
+  WORKSPACE_UNRESOLVED: 'WORKSPACE_UNRESOLVED',
+  WORKSPACE_CONFIRMATION_REQUIRED: 'WORKSPACE_CONFIRMATION_REQUIRED',
+  WORKSPACE_CONFIRMATION_DENIED: 'WORKSPACE_CONFIRMATION_DENIED',
+  WORKSPACE_CHANGED: 'WORKSPACE_CHANGED',
+  WORKSPACE_UNAVAILABLE: 'WORKSPACE_UNAVAILABLE',
+  WORKSPACE_MISMATCH: 'WORKSPACE_MISMATCH',
+  WORKSPACE_MULTIPLE_ROOTS: 'WORKSPACE_MULTIPLE_ROOTS',
 
   // Protocol / session
   NONCE_MISMATCH: 'NONCE_MISMATCH',
@@ -286,6 +294,27 @@ export interface Evidence {
   readonly summary: string;
   readonly artifactRef?: string | undefined;
   readonly rawDetails?: Record<string, unknown> | undefined;
+}
+
+// ─── Workspace Root State ──────────────────────────────────────────────────
+
+export type WorkspaceSelectionSource = 'ide' | 'cli';
+export type WorkspaceConfirmationStatus = 'pending' | 'confirmed' | 'denied';
+export type WorkspaceResolutionStatus = 'resolved' | 'missing' | 'unavailable' | 'unresolved';
+export type WorkspaceCloudStatus =
+  | 'not_cloud'
+  | 'onedrive_redirected'
+  | 'cloud_placeholder'
+  | 'unknown';
+
+export interface WorkspaceRootState {
+  readonly selectedPath: string;
+  readonly canonicalPath: string | null;
+  readonly selectionSource: WorkspaceSelectionSource;
+  readonly confirmationStatus: WorkspaceConfirmationStatus;
+  readonly confirmationTimestamp?: number | undefined;
+  readonly resolutionStatus: WorkspaceResolutionStatus;
+  readonly cloudStatus: WorkspaceCloudStatus;
 }
 
 // ─── Action definitions ────────────────────────────────────────────────────

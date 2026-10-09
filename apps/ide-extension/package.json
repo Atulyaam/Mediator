@@ -55,6 +55,7 @@
   },
   "dependencies": {
     "@mediator/shared-contracts": "*",
-    "@mediator/task-domain": "*"
+    "@mediator/task-domain": "*",
+    "@mediator/workspace-boundary": "*"
   }
 }

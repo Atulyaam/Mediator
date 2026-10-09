@@ -186,14 +186,46 @@ export class MediatorPanel {
     <h2>Workspace</h2>
     <table>
       <tr>
-        <td>Root</td>
-        <td>${s.workspaceRoot ? `<code>${esc(s.workspaceRoot)}</code>` : '<span style="color:var(--muted)">Not selected</span>'}</td>
+        <td>Selected Path</td>
+        <td>${s.workspace?.selectedPath ? `<code>${esc(s.workspace.selectedPath)}</code>` : (s.workspaceRoot ? `<code>${esc(s.workspaceRoot)}</code>` : '<span style="color:var(--muted)">Not selected</span>')}</td>
       </tr>
       <tr>
-        <td>Confirmed</td>
-        <td>${s.workspaceConfirmed
-          ? '<span style="color:#10b981">✓ Confirmed</span>'
-          : '<span style="color:#f59e0b">⚠ Awaiting confirmation</span>'}</td>
+        <td>Canonical Root</td>
+        <td>${s.workspace?.canonicalPath ? `<code>${esc(s.workspace.canonicalPath)}</code>` : (s.workspace?.resolutionStatus === 'missing' ? '<span style="color:#ef4444">Missing / Not found</span>' : '<span style="color:var(--muted)">Unresolved</span>')}</td>
+      </tr>
+      <tr>
+        <td>Confirmation</td>
+        <td>${
+          s.workspace?.confirmationStatus === 'confirmed' || (s.workspaceConfirmed && !s.workspace)
+            ? '<span style="color:#10b981">✓ Confirmed</span>'
+            : s.workspace?.confirmationStatus === 'denied'
+              ? '<span style="color:#ef4444">✗ Denied</span>'
+              : '<span style="color:#f59e0b">⚠ Awaiting confirmation</span>'
+        }</td>
+      </tr>
+      <tr>
+        <td>Storage Type</td>
+        <td>${
+          s.workspace?.cloudStatus === 'onedrive_redirected'
+            ? '<span style="color:#60a5fa">OneDrive Redirected</span>'
+            : s.workspace?.cloudStatus === 'cloud_placeholder'
+              ? '<span style="color:#f59e0b">Cloud Placeholder</span>'
+              : s.workspace?.cloudStatus === 'not_cloud'
+                ? '<span>Local Storage</span>'
+                : '<span style="color:var(--muted)">Unknown</span>'
+        }</td>
+      </tr>
+      <tr>
+        <td>Resolution</td>
+        <td>${
+          s.workspace?.resolutionStatus === 'resolved'
+            ? '<span style="color:#10b981">Resolved</span>'
+            : s.workspace?.resolutionStatus === 'missing'
+              ? '<span style="color:#ef4444">Missing</span>'
+              : s.workspace?.resolutionStatus === 'unavailable'
+                ? '<span style="color:#ef4444">Inaccessible</span>'
+                : '<span style="color:var(--muted)">Unresolved</span>'
+        }</td>
       </tr>
     </table>
   </div>

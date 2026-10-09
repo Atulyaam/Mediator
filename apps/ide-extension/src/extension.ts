@@ -13,11 +13,13 @@ import {
   createInitialState,
   withRunState,
   withWorkspace,
+  withWorkspaceState,
   withNewTaskSession,
   getStatusBarText,
   getStatusBarTooltip,
   type MediatorLocalState,
 } from './mediatorState.js';
+import { confirmWorkspaceRoot, selectFromIdeFolders } from '@mediator/workspace-boundary';
 import { MediatorPanel } from './panel.js';
 
 // ─── Extension state (local only) ─────────────────────────────────────────
@@ -86,12 +88,33 @@ async function cmdStart(context: vscode.ExtensionContext): Promise<void> {
 
   // First start: confirm canonical workspace root
   if (!_state.workspaceConfirmed) {
+    const selected = _state.workspace?.selectedPath ?? _state.workspaceRoot;
+    const canonical = _state.workspace?.canonicalPath ?? _state.workspaceRoot;
+    const isRedirected = _state.workspace?.cloudStatus === 'onedrive_redirected';
+
+    let promptMsg = `Mediator requires confirmation for the workspace root:\n\nSelected path: ${selected}\nCanonical root: ${canonical}`;
+    if (isRedirected) {
+      promptMsg += `\n(Storage: OneDrive redirected folder)`;
+    }
+    promptMsg += `\n\nIs this correct?`;
+
     const confirmation = await vscode.window.showInformationMessage(
-      `Mediator will use this workspace root:\n\n${_state.workspaceRoot}\n\nIs this correct?`,
+      promptMsg,
       { modal: true },
       'Confirm',
+      'Deny',
     );
     if (confirmation !== 'Confirm') {
+      if (confirmation === 'Deny' && _state.workspace) {
+        const denied = confirmWorkspaceRoot(_state.workspace, false);
+        if (denied.ok) {
+          _state = withWorkspaceState(_state, denied.value);
+          updateStatusBar();
+        }
+      }
+      void vscode.window.showWarningMessage(
+        'Mediator: Workspace confirmation was denied or cancelled. Project file operations will remain blocked.',
+      );
       return;
     }
     _state = withWorkspace(_state, _state.workspaceRoot, true);
@@ -166,7 +189,12 @@ function cmdShowCapabilities(): void {
 function detectWorkspaceRoot(): string | null {
   const folders = vscode.workspace.workspaceFolders;
   if (!folders || folders.length === 0) return null;
-  // Use the first workspace folder; do NOT hard-code any paths
+  const paths = folders.map((f) => f.uri.fsPath);
+  const selection = selectFromIdeFolders(paths);
+  if (selection.ok) {
+    return selection.value;
+  }
+  logInfo(`Multi-root workspace note: ${selection.error.message}`);
   const first = folders[0];
   if (!first) return null;
   return first.uri.fsPath;

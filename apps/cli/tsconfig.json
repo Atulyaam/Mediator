@@ -7,7 +7,8 @@
   },
   "references": [
     { "path": "../../packages/shared-contracts" },
-    { "path": "../../packages/task-domain" }
+    { "path": "../../packages/task-domain" },
+    { "path": "../../packages/workspace-boundary" }
   ],
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "src/**/*.test.ts"]

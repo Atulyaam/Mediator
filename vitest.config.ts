@@ -6,6 +6,7 @@ export default defineConfig({
     alias: {
       '@mediator/shared-contracts': resolve(__dirname, 'packages/shared-contracts/src/index.ts'),
       '@mediator/task-domain': resolve(__dirname, 'packages/task-domain/src/index.ts'),
+      '@mediator/workspace-boundary': resolve(__dirname, 'packages/workspace-boundary/src/index.ts'),
     },
   },
   test: {

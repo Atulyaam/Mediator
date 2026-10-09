@@ -3,6 +3,7 @@
   "references": [
     { "path": "./packages/shared-contracts" },
     { "path": "./packages/task-domain" },
+    { "path": "./packages/workspace-boundary" },
     { "path": "./apps/cli" },
     { "path": "./apps/ide-extension" },
     { "path": "./apps/browser-extension" }

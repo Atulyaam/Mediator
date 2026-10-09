@@ -8,6 +8,10 @@
 import { TaskState, type TaskStateValue, createTaskSession, applyTransition } from '@mediator/task-domain';
 import { type TaskSession } from '@mediator/task-domain';
 import { type ExecutorCapability } from '@mediator/shared-contracts';
+import {
+  type WorkspaceRootState,
+  inspectWorkspaceRoot,
+} from '@mediator/workspace-boundary';
 
 // ─── Mediator run state ────────────────────────────────────────────────────
 
@@ -15,6 +19,7 @@ export type MediatorRunState = 'stopped' | 'starting' | 'running' | 'stopping' |
 
 export interface MediatorLocalState {
   readonly runState: MediatorRunState;
+  readonly workspace: WorkspaceRootState | null;
   readonly workspaceRoot: string | null;
   readonly workspaceConfirmed: boolean;
   readonly taskSession: TaskSession | null;
@@ -36,11 +41,21 @@ export type CapabilityStatus = 'available' | 'unavailable' | 'unknown' | 'disabl
 
 // ─── Initial state ─────────────────────────────────────────────────────────
 
-export function createInitialState(workspaceRoot: string | null): MediatorLocalState {
+export function createInitialState(
+  workspaceInput: string | WorkspaceRootState | null,
+): MediatorLocalState {
+  let wsState: WorkspaceRootState | null = null;
+  if (typeof workspaceInput === 'string') {
+    wsState = inspectWorkspaceRoot(workspaceInput, 'ide');
+  } else if (workspaceInput) {
+    wsState = workspaceInput;
+  }
+
   return {
     runState: 'stopped',
-    workspaceRoot,
-    workspaceConfirmed: false,
+    workspace: wsState,
+    workspaceRoot: wsState?.canonicalPath ?? wsState?.selectedPath ?? null,
+    workspaceConfirmed: wsState?.confirmationStatus === 'confirmed',
     taskSession: null,
     capabilities: createInitialCapabilities(),
     errorMessage: null,
@@ -82,7 +97,54 @@ export function withWorkspace(
   workspaceRoot: string | null,
   confirmed: boolean,
 ): MediatorLocalState {
-  return { ...state, workspaceRoot, workspaceConfirmed: confirmed };
+  if (!workspaceRoot) {
+    return {
+      ...state,
+      workspace: null,
+      workspaceRoot: null,
+      workspaceConfirmed: false,
+    };
+  }
+
+  let ws: WorkspaceRootState;
+  if (state.workspace && state.workspace.selectedPath === workspaceRoot) {
+    ws = { ...state.workspace };
+  } else {
+    ws = inspectWorkspaceRoot(workspaceRoot, 'ide');
+  }
+
+  if (confirmed) {
+    ws = {
+      ...ws,
+      confirmationStatus: 'confirmed',
+      confirmationTimestamp: ws.confirmationTimestamp ?? Date.now(),
+    };
+  } else {
+    ws = {
+      ...ws,
+      confirmationStatus: 'pending',
+      confirmationTimestamp: undefined,
+    };
+  }
+
+  return {
+    ...state,
+    workspace: ws,
+    workspaceRoot: ws.canonicalPath ?? ws.selectedPath,
+    workspaceConfirmed: confirmed,
+  };
+}
+
+export function withWorkspaceState(
+  state: MediatorLocalState,
+  workspace: WorkspaceRootState | null,
+): MediatorLocalState {
+  return {
+    ...state,
+    workspace,
+    workspaceRoot: workspace?.canonicalPath ?? workspace?.selectedPath ?? null,
+    workspaceConfirmed: workspace?.confirmationStatus === 'confirmed',
+  };
 }
 
 export function withNewTaskSession(
@@ -128,7 +190,15 @@ export function getStatusBarText(state: MediatorLocalState): string {
 export function getStatusBarTooltip(state: MediatorLocalState): string {
   const lines: string[] = [`Mediator v${state.version}`, `Status: ${state.runState}`];
 
-  if (state.workspaceRoot) {
+  if (state.workspace && state.workspace.selectedPath) {
+    const ws = state.workspace;
+    const confirmed = state.workspaceConfirmed ? '✓' : '⚠ unconfirmed';
+    const cloud = ws.cloudStatus === 'onedrive_redirected' ? ' [OneDrive]' : '';
+    lines.push(`Workspace: ${ws.selectedPath} (${confirmed})${cloud}`);
+    if (ws.canonicalPath && ws.canonicalPath.toLowerCase() !== ws.selectedPath.toLowerCase()) {
+      lines.push(`Canonical: ${ws.canonicalPath}`);
+    }
+  } else if (state.workspaceRoot) {
     const confirmed = state.workspaceConfirmed ? '✓' : '⚠ unconfirmed';
     lines.push(`Workspace: ${state.workspaceRoot} (${confirmed})`);
   } else {
