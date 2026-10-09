@@ -29,6 +29,8 @@ import {
   type WorkspaceConfirmationStatus,
   type WorkspaceResolutionStatus,
   type WorkspaceCloudStatus,
+  type ContainedPath,
+  type FileOperationType,
 } from '@mediator/shared-contracts';
 
 export type {
@@ -37,14 +39,21 @@ export type {
   WorkspaceConfirmationStatus,
   WorkspaceResolutionStatus,
   WorkspaceCloudStatus,
+  ContainedPath,
+  FileOperationType,
 };
 
 // ─── FileSystem Adapter Interface ──────────────────────────────────────────
 
 export interface FileSystemAdapter {
   existsSync(p: string): boolean;
-  statSync(p: string): { isDirectory(): boolean; isSymbolicLink?(): boolean };
+  statSync(p: string): { isDirectory(): boolean; isSymbolicLink?(): boolean; size?: number; mtimeMs?: number };
   realpathSync(p: string): string;
+  lstatSync?(p: string): { isDirectory(): boolean; isSymbolicLink(): boolean };
+  readFileSync?(p: string, encoding?: BufferEncoding): string;
+  writeFileSync?(p: string, data: string): void;
+  unlinkSync?(p: string): void;
+  mkdirSync?(p: string, options?: { recursive?: boolean }): void;
 }
 
 export const defaultFileSystemAdapter: FileSystemAdapter = {
@@ -57,7 +66,28 @@ export const defaultFileSystemAdapter: FileSystemAdapter = {
     }
     return fs.realpathSync(p);
   },
+  lstatSync: (p: string) => fs.lstatSync(p),
+  readFileSync: (p: string, encoding = 'utf8') => fs.readFileSync(p, encoding),
+  writeFileSync: (p: string, data: string) => fs.writeFileSync(p, data, 'utf8'),
+  unlinkSync: (p: string) => fs.unlinkSync(p),
+  mkdirSync: (p: string, options) => { fs.mkdirSync(p, options); },
 };
+
+// Re-export Path Containment & Windows Path Security APIs (S05)
+export {
+  type ValidatePathOptions,
+  normalizeWindowsPath,
+  hasAlternateDataStream,
+  hasReservedDeviceName,
+  hasMalformedWindowsComponents,
+  isPathInsideRoot,
+  findClosestExistingAncestor,
+  validateContainedPath,
+  revalidateContainedPath,
+  safeReadProjectFile,
+  safeWriteProjectFile,
+  safeDeleteProjectFile,
+} from './pathContainment.js';
 
 // ─── Workspace Selection (IDE & CLI) ───────────────────────────────────────
 

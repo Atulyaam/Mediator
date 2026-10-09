@@ -2,7 +2,7 @@
 
 - **Master spec:** Mediator_Final_Development_Plan_v1.3.md
 - **Sprint plan:** Mediator_Sprint_Wise_Development_Plan_v1.3.md
-- **Current sprint:** S04 — Canonical workspace root
+- **Current sprint:** S05 — Path Containment & Windows Path Security
 - **Status:** PASS
 - **Provider:** Google Gemini (gemini.google.com)
 - **IDE:** Antigravity IDE on Windows 11
@@ -14,21 +14,27 @@
 
 ---
 
-## S04 Exit Gate Checklist
+## S05 Exit Gate Checklist
 
 | Item | Status | Evidence |
 |---|---|---|
-| IDE and CLI share authoritative workspace contract | ✅ PASS | `@mediator/workspace-boundary` used by both `apps/ide-extension` and `apps/cli` |
-| `selectedPath` and `canonicalPath` stored separately | ✅ PASS | `WorkspaceRootState` interface in `@mediator/shared-contracts` & `@mediator/workspace-boundary` |
-| User must explicitly confirm canonical root | ✅ PASS | `confirmWorkspaceRoot()`, CLI `--confirm`, VS Code confirmation dialog in `cmdStart` |
-| Missing/inaccessible/unresolved roots block operations | ✅ PASS | `checkWorkspacePermittedForFileOps()` returns typed errors (`WORKSPACE_CONFIRMATION_REQUIRED`, `WORKSPACE_CONFIRMATION_DENIED`, `WORKSPACE_UNRESOLVED`) |
-| Changed canonical root invalidates prior confirmation | ✅ PASS | `updateWorkspaceRoot()` resets `confirmationStatus` to `pending` when canonical path changes |
-| No hard-coded project path or silent workspace fallback | ✅ PASS | Zero fallbacks to `process.cwd()`, `os.homedir()`, or sample paths in resolution logic |
-| IDE multi-root workspace handled safely | ✅ PASS | `selectFromIdeFolders()` requires user to choose exactly one root in V1 (`WORKSPACE_MULTIPLE_ROOTS`) |
-| IDE and CLI mismatch detection | ✅ PASS | `reconcileSelections()` refuses to guess and yields `WORKSPACE_MISMATCH` |
-| OneDrive-redirected folders displayed without blanket rejection | ✅ PASS | `detectCloudStatus()` identifies `onedrive_redirected` and permits confirmation |
-| Unknown cloud placeholder status remains explicitly unknown | ✅ PASS | Returns `unknown` without forcing file downloads or recursive scans |
-| Existing S01–S03 behavior remains unchanged | ✅ PASS | All 79 task domain tests + 10 mediator state tests + S01-S03 contracts pass |
+| Single authoritative path containment API | ✅ PASS | `validateContainedPath()` in `packages/workspace-boundary/src/pathContainment.ts` |
+| Requires confirmed and resolved workspace root | ✅ PASS | Returns `WORKSPACE_CONFIRMATION_REQUIRED`, `WORKSPACE_CONFIRMATION_DENIED`, `WORKSPACE_UNAVAILABLE`, `WORKSPACE_UNRESOLVED` |
+| Parent directory traversal (`../`) rejected | ✅ PASS | Tests 3, 3b, 3c in `pathContainment.test.ts` verify `PATH_TRAVERSAL` |
+| Outside absolute paths rejected | ✅ PASS | Tests 4, 4b in `pathContainment.test.ts` verify `PATH_OUTSIDE_ROOT` |
+| Sibling directory prefix attack prevented | ✅ PASS | Test 5 (`C:\project-evil` vs `C:\project`) verifies non-prefix match |
+| Outside-pointing symlinks and junctions denied | ✅ PASS | Tests 6, 6b in `pathContainment.test.ts` verify `PATH_SYMLINK_ESCAPE` via `realpathSync` |
+| In-root symlinks permitted safely | ✅ PASS | Test 7 verifies in-root symlinks targeting inside canonical root succeed |
+| Non-existent targets with safe parent handled | ✅ PASS | Test 8 verifies safe ancestor projection with `exists: false` |
+| Non-existent targets with unsafe parent denied | ✅ PASS | Test 9 verifies ancestor resolving outside root returns `PATH_SYMLINK_ESCAPE` |
+| Reserved device names rejected | ✅ PASS | Test 10a verifies `CON`, `NUL`, `AUX`, `PRN`, `COM1-9`, `LPT1-9` yield `PATH_RESERVED_DEVICE` |
+| Alternate Data Streams (ADS) rejected | ✅ PASS | Test 10b verifies `:` syntax yields `PATH_ALTERNATE_DATA_STREAM` |
+| Trailing dots, spaces & illegal Win32 chars denied | ✅ PASS | Test 10c verifies malformed paths yield `PATH_MALFORMED` |
+| Case-insensitive Windows path comparisons | ✅ PASS | Test 11 verifies lowercase/uppercase paths match canonical root |
+| UNC and extended-length fail closed | ✅ PASS | Test 12 verifies `\\server\share` yields `PATH_OUTSIDE_ROOT` |
+| TOCTOU race detection & safe I/O wrappers | ✅ PASS | `revalidateContainedPath()`, `safeReadProjectFile()`, `safeWriteProjectFile()`, `safeDeleteProjectFile()` |
+| CLI `--target` validation integration | ✅ PASS | `mediator workspace --workspace <path> --confirm --target <file>` verifies containment directly |
+| Existing S01–S04 behavior intact | ✅ PASS | All 121 earlier tests + 34 S05 tests = **155 / 155 tests passing** |
 
 ---
 
@@ -37,43 +43,54 @@
 | Command | Exit code | Result | Evidence |
 |---|---:|---|---|
 | `npm run lint` | 0 | 0 errors, 0 warnings across all `.ts` files in all 6 workspaces | stdout |
-| `npm run typecheck` | 0 | All 6 workspaces (`shared-contracts`, `task-domain`, `workspace-boundary`, `ide-extension`, `cli`, `browser-extension`) typechecked cleanly | stdout |
-| `npm run build` | 0 | All 6 workspaces built cleanly | stdout |
-| `npm test` | 0 | **121 / 121 unit tests passed** (4 test files: 42 workspace-boundary, 43 task-domain, 18 mediatorState, 18 contracts/coord) | stdout |
-| `node apps/cli/dist/index.js workspace --workspace .` | 0 | Displays selected `.`, canonical `C:\Users\Atul2\OneDrive\Desktop\Mediator`, PENDING, blocks file ops | stdout |
-| `node apps/cli/dist/index.js workspace --workspace . --confirm` | 0 | Displays CONFIRMED status and permitted for operations | stdout |
-| `node apps/cli/dist/index.js workspace --workspace non_existent_dir_12345` | 1 | Fails cleanly with MISSING / unresolved status | stdout |
+| `npm run typecheck` | 0 | All 6 workspaces typechecked cleanly (0 errors) | stdout |
+| `npm run build` | 0 | All 6 workspaces built cleanly (`tsc -p tsconfig.json`) | stdout |
+| `npm test` | 0 | **155 / 155 unit tests passed** (5 test files: 34 pathContainment, 42 workspace-boundary, 43 task-domain, 18 mediatorState, 18 contracts/coord) | stdout |
+| `node apps/cli/dist/index.js workspace --workspace . --confirm --target package.json` | 0 | Valid target confirmed: `CONTAINED`, `Exists: YES` | stdout |
+| `node apps/cli/dist/index.js workspace --workspace . --confirm --target ../outside.txt` | 1 | Traversal denied: `PATH_TRAVERSAL` | stdout |
+| `node apps/cli/dist/index.js workspace --workspace . --confirm --target ../Mediator-evil/secret.txt` | 1 | Sibling prefix attack denied: `PATH_TRAVERSAL` | stdout |
+| `node apps/cli/dist/index.js workspace --workspace . --confirm --target con.txt` | 1 | Reserved device denied: `PATH_RESERVED_DEVICE` | stdout |
+| `node apps/cli/dist/index.js workspace --workspace . --confirm --target package.json:hidden` | 1 | ADS denied: `PATH_ALTERNATE_DATA_STREAM` | stdout |
+| `node apps/cli/dist/index.js workspace --workspace . --target package.json` | 1 | Unconfirmed root denied: `WORKSPACE_CONFIRMATION_REQUIRED` | stdout |
 
 ---
 
-## Security checks & evidence
+## Containment Strategy & Security Defenses
 
-- **Gating file operations:** `checkWorkspacePermittedForFileOps()` strictly denies access with `WORKSPACE_CONFIRMATION_REQUIRED` or `WORKSPACE_CONFIRMATION_DENIED` unless `confirmationStatus === 'confirmed'`.
-- **Fail-safe resolution:** Unresolvable, missing, or file-instead-of-directory paths return typed errors rather than falling back to host `cwd` or home directory.
-- **Re-confirmation on relocation:** Changing `selectedPath` to a location with a different canonical path automatically revokes confirmed status back to `pending`.
-- **Non-interactive CLI protection:** CLI calls without `--confirm` report pending status and exit non-zero on file-op attempts; no silent implicit approval.
-- **Review-only enforcement:** Maintained strict Review-only posture (ADR-002), no command execution outside approved workflows.
+1. **Root Gating:** Verification begins by checking `checkWorkspacePermittedForFileOps()`. Unconfirmed, denied, missing, or unresolved roots immediately block file validation without inspecting target paths.
+2. **Lexical Boundary Enforcement:**
+   - Traversal tokens (`../`, `..\\`) and outside absolute drive paths are resolved and evaluated against `canonicalRoot`.
+   - **Prefix Collision Defense:** Boundary containment explicitly verifies `candidate === root || candidate.startsWith(root + path.sep)`. Simple substring checks (`startsWith(root)`) that would allow `C:\project-evil` inside `C:\project` are strictly prevented.
+3. **Physical Filesystem Resolution:**
+   - For existing files, `realpathSync` resolves all intermediate symlinks, directory junctions, and reparse points. The resolved canonical target is tested against `canonicalRoot`.
+   - For new (non-existent) files, the closest existing ancestor directory is located and its `realpathSync` verified. If any ancestor resolves outside the root, the path is denied with `PATH_SYMLINK_ESCAPE`.
+4. **Windows Edge-Case Classification:**
+   - **Alternate Data Streams:** Any `:` (except index 1 of a leading drive letter `C:`) is classified as `PATH_ALTERNATE_DATA_STREAM`.
+   - **Reserved Device Names:** Checked against `CON`, `PRN`, `AUX`, `NUL`, `COM1-9`, `LPT1-9` (and extensions such as `CON.txt`, `NUL.json`) across every path component.
+   - **Trailing Dots / Spaces:** Rejected with `PATH_MALFORMED` because Win32 automatically strips trailing dots and spaces, which could create unintended collisions.
+   - **Case-Insensitive Windows Semantics:** Path comparison normalizes drive letters to uppercase and performs case-insensitive comparisons while preserving NFC Unicode normalization.
+5. **TOCTOU Reduction:**
+   - `revalidateContainedPath()` re-checks identity immediately before operations.
+   - `safeReadProjectFile()`, `safeWriteProjectFile()`, and `safeDeleteProjectFile()` verify containment, perform the operation, and re-verify that the physical realpath remained strictly within `canonicalRoot`.
 
 ---
 
-## Changed / Added files in S04
+## Windows-Specific Limitations & Known Risks
 
-- `packages/workspace-boundary/package.json` (new package)
-- `packages/workspace-boundary/tsconfig.json` (new config)
-- `packages/workspace-boundary/src/index.ts` (new workspace selection, canonicalization, cloud detection, confirmation lifecycle)
-- `packages/workspace-boundary/src/index.test.ts` (42 comprehensive unit tests covering all 12 S04 requirements)
-- `packages/shared-contracts/src/index.ts` (added workspace error codes and `WorkspaceRootState` contract)
-- `apps/ide-extension/src/mediatorState.ts` (integrated `WorkspaceRootState`, canonical tooltip, updated `createInitialState` and `withWorkspace`)
-- `apps/ide-extension/src/panel.ts` (added Workspace Root card showing selected path, canonical path, confirmation, resolution, and storage type)
-- `apps/ide-extension/src/extension.ts` (integrated multi-root selection and canonical confirmation modal before task start)
-- `apps/ide-extension/package.json` (added `@mediator/workspace-boundary` dependency)
-- `apps/ide-extension/tsconfig.json` (added `@mediator/workspace-boundary` reference)
-- `apps/cli/src/index.ts` (added `-w, --workspace` option, `--confirm` flag, `mediator workspace` command, non-interactive gating)
-- `apps/cli/package.json` (added `@mediator/workspace-boundary` dependency)
-- `apps/cli/tsconfig.json` (added `@mediator/workspace-boundary` reference)
-- `tsconfig.json` (registered `@mediator/workspace-boundary` path and project reference)
-- `vitest.config.ts` (registered `@mediator/workspace-boundary` path alias)
-- `docs/SPRINT_STATUS.md` (updated with S04 results)
+- **Win32 Reparse Point Attributes:** Deep reparse point tag queries (such as detecting whether a reparse point is a OneDrive cloud placeholder vs a directory junction) rely on `fs.realpathSync.native` delta and OneDrive directory heuristics. Windows APIs like `GetFileAttributesW` with `FILE_ATTRIBUTE_REPARSE_POINT` are not directly exposed in standard Node.js without native C++ add-ons. Where physical target resolution cannot be proven, the safety status remains `unknown` or fails closed.
+- **Short Name (8.3) Aliases:** On volumes with 8.3 generation enabled, short names (e.g. `PROGRA~1`) are canonicalized to their long names by `fs.realpathSync.native`. If an 8.3 alias references an outside path, `realpathSync` resolves it outside and `validateContainedPath` denies it.
+- **Symlink Creation Privileges:** Creating symlinks on Windows without Developer Mode enabled requires administrative privileges (`SeCreateSymbolicLinkPrivilege`). Real OS symlink tests conditionally run if privileged; mock adapter tests guarantee 100% deterministic test coverage across all environments.
+
+---
+
+## Changed / Added files in S05
+
+- `packages/shared-contracts/src/index.ts` (added `ContainedPath` and `FileOperationType` interfaces)
+- `packages/workspace-boundary/src/pathContainment.ts` (new core path containment, Windows security classifiers, and safe I/O wrappers)
+- `packages/workspace-boundary/src/pathContainment.test.ts` (new 34 unit tests covering all 15 S05 requirements)
+- `packages/workspace-boundary/src/index.ts` (enhanced `FileSystemAdapter`, re-exported S05 APIs)
+- `apps/cli/src/index.ts` (added `-t, --target <path>` option to `mediator workspace` command for authoritative containment checks)
+- `docs/SPRINT_STATUS.md` (updated with S05 verification evidence)
 
 ---
 
@@ -82,19 +99,13 @@
 - **ADR-001:** Google Gemini selected as first provider
 - **ADR-002:** Review-only mode for V1 — no automatic command execution
 - **ADR-003:** Canonical workspace resolution requires separate tracking of `selectedPath` vs `canonicalPath`, explicit confirmation gating, and auto-invalidation on path alteration.
-
----
-
-## Known limitations and unresolved cases
-
-- **Symlink escapes / Path containment:** S04 establishes the canonical root. S05 will implement the path containment enforcement (preventing subpath directory traversal `../`, symlinks pointing outside the canonical root, and junction escapes).
-- **Reparse point attributes:** Advanced Windows Win32 API reparse-point attribute queries require native bindings (e.g. `GetFileAttributesW` with `FILE_ATTRIBUTE_REPARSE_POINT`). In V1 Node runtime, junction detection relies on `realpathSync` resolution delta; cloud status uses well-known environment/registry redirection heuristics and marks uncertain cases explicitly as `unknown`.
+- **ADR-004:** Path containment is enforced via a single authoritative API (`validateContainedPath`), combining lexical prefix defense (`root + path.sep`), physical `realpathSync` resolution, ancestor validation for non-existent targets, and Windows edge-case classifiers.
 
 ---
 
 ## Next sprint
 
-**S05 — Workspace boundary enforcement (Path containment & traversal defense)**
+**S06 — Secret scanner + context filter**
 
-Dependencies: S04 ✅  
-Goal: Enforce that all task-related read/write operations strictly stay within the confirmed canonical workspace root. Prevent directory traversal (`../`), canonical symlink/junction escapes, hard-link tricks, and TOCTOU races between validation and file access.
+Dependencies: S05 ✅  
+Goal: Stop credentials and sensitive tokens from reaching the web AI, ordinary logs, diagnostics, or debug bundles. Implement baseline patterns (`.env*`, `*.pem`, `*.key`, `id_rsa`, `.ssh/`, `.aws/`, credentials, etc.), `.mediatorignore` support for context collection, redaction in all outputs, and synthetic secret fixture tests.

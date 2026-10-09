@@ -15,6 +15,7 @@ import {
   inspectWorkspaceRoot,
   confirmWorkspaceRoot,
   checkWorkspacePermittedForFileOps,
+  validateContainedPath,
   type WorkspaceRootState,
 } from '@mediator/workspace-boundary';
 
@@ -27,22 +28,39 @@ const parsedWsRes = parseCliWorkspaceArg(allArgs);
 const cliWorkspacePath = parsedWsRes.ok ? parsedWsRes.value : null;
 const hasConfirmFlag = allArgs.includes('--confirm');
 
+// Parse --target / -t if provided
+function parseTargetArg(args: readonly string[]): string | null {
+  for (let i = 0; i < args.length; i++) {
+    const a = args[i];
+    if (a === '--target' || a === '-t') {
+      const next = args[i + 1];
+      if (next && !next.startsWith('-')) return next;
+    }
+    if (a?.startsWith('--target=')) {
+      return a.slice('--target='.length);
+    }
+  }
+  return null;
+}
+const targetArg = parseTargetArg(allArgs);
+
 function printUsage(): void {
   process.stdout.write(`
 Mediator CLI v${VERSION} (Protocol v${PROTOCOL_VERSION})
 Mode: Review-only (V1) — no automatic command execution
 
 Usage:
-  mediator status [--workspace <path>] [--confirm]  Show status & workspace details
-  mediator workspace --workspace <path> [--confirm] Inspect and canonicalize workspace root
-  mediator start [--workspace <path>] [--confirm]   Start Mediator (local state only)
-  mediator stop                                     Stop Mediator
-  mediator capabilities                             Show detected capabilities and execution GO/NO-GO
-  mediator version                                  Show version information
-  mediator help                                     Show this message
+  mediator status [--workspace <path>] [--confirm]                     Show status & workspace details
+  mediator workspace --workspace <path> [--confirm] [--target <file>]  Inspect root & check path containment
+  mediator start [--workspace <path>] [--confirm]                      Start Mediator (local state only)
+  mediator stop                                                        Stop Mediator
+  mediator capabilities                                                Show detected capabilities and execution GO/NO-GO
+  mediator version                                                     Show version information
+  mediator help                                                        Show this message
 
 Options:
   -w, --workspace <path>  Explicitly specify workspace directory
+  -t, --target <path>     Validate a file path against workspace containment
   --confirm               Explicitly confirm the workspace root
 
 Security note:
@@ -119,6 +137,17 @@ function handleWorkspaceCommand(): void {
 
   if (!ws || ws.resolutionStatus !== 'resolved') {
     process.exit(1);
+  }
+
+  if (targetArg) {
+    process.stdout.write(`Path Containment Check:\n  Target input:    ${targetArg}\n`);
+    const valRes = validateContainedPath(ws, targetArg);
+    if (!valRes.ok) {
+      process.stdout.write(`  Containment:     DENIED\n  Error code:      ${valRes.error.code}\n  Reason:          ${valRes.error.message}\n\n`);
+      process.exit(1);
+    } else {
+      process.stdout.write(`  Containment:     CONTAINED\n  Resolved path:   ${valRes.value.resolvedPath}\n  Relative path:   ${valRes.value.relativePath}\n  Exists on disk:  ${valRes.value.exists ? 'YES' : 'NO (new target)'}\n\n`);
+    }
   }
 }
 

@@ -22,6 +22,18 @@ Every module must:
 |---|---|---|---|---|
 | S00 | — | Sandbox canary UNKNOWN | `SANDBOX_UNVERIFIED` | SANDBOX_CAPABILITIES.md all fields = unknown |
 | S00 | — | Provider DOM extraction unverified | — | Extension not deployed; manual DevTools verification only |
+| S04 | `workspace-boundary` | Unconfirmed or unresolved root | `WORKSPACE_CONFIRMATION_REQUIRED`, `WORKSPACE_UNRESOLVED` | User must confirm canonical path via CLI or IDE modal |
+| S04 | `workspace-boundary` | Mismatched IDE vs CLI root | `WORKSPACE_MISMATCH` | Clear disagreeing option; do not silently guess root |
+| S05 | `workspace-boundary` | Traversal or escaping link | `PATH_TRAVERSAL`, `PATH_SYMLINK_ESCAPE`, `PATH_OUTSIDE_ROOT` | Target resolves outside canonical root; check symlink/junction targets |
+| S05 | `workspace-boundary` | Reserved device or ADS | `PATH_RESERVED_DEVICE`, `PATH_ALTERNATE_DATA_STREAM`, `PATH_MALFORMED` | Illegal Windows syntax, ADS colons, or CON/NUL/COM/LPT device names |
+| S05 | `workspace-boundary` | TOCTOU path race | `PATH_DENIED`, `PATH_SYMLINK_ESCAPE` | Target changed identity or was swapped between validation and use |
+
+### Windows-Specific Path Security Limitations (S05)
+
+- **Reparse Point Inspection:** Deep Win32 tag inspection (`IO_REPARSE_TAG_MOUNT_POINT` vs cloud placeholders) requires native Win32 APIs not in standard Node.js. Node's `realpathSync.native` resolves junctions/symlinks; where physical resolution delta cannot prove containment, the path is rejected or classified as `unknown`.
+- **Short Names (8.3):** Resolved to canonical long names via `realpathSync.native`. Escapes via short-name aliases are rejected by canonical prefix defense.
+- **Elevation for Symlink Creation:** Creating symlinks on Windows without Developer Mode requires administrative privileges. Test suite uses mock adapter to guarantee deterministic testing across all environments.
+
 
 ---
 

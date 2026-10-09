@@ -317,6 +317,24 @@ export interface WorkspaceRootState {
   readonly cloudStatus: WorkspaceCloudStatus;
 }
 
+// ─── Contained Path State (S05) ────────────────────────────────────────────
+
+export type FileOperationType = 'read' | 'write' | 'delete' | 'patch' | 'rename' | 'list';
+
+export interface ContainedPath {
+  /** The original input path requested */
+  readonly inputPath: string;
+  /** The validated absolute canonical path on disk (or safe projected target) */
+  readonly resolvedPath: string;
+  /** The normalized relative path from canonical root using forward slashes */
+  readonly relativePath: string;
+  /** Whether the target currently exists on disk */
+  readonly exists: boolean;
+  /** Whether the target is a directory (if exists) */
+  readonly isDirectory?: boolean | undefined;
+}
+
+
 // ─── Action definitions ────────────────────────────────────────────────────
 
 export interface BaseAction {
