@@ -2,7 +2,7 @@
 
 - **Master spec:** Mediator_Final_Development_Plan_v1.3.md
 - **Sprint plan:** Mediator_Sprint_Wise_Development_Plan_v1.3.md
-- **Current sprint:** S02 — Shared contracts, typed errors, correlation IDs
+- **Current sprint:** S03 — Explicit task/session state machine
 - **Status:** PASS
 - **Provider:** Google Gemini (gemini.google.com)
 - **IDE:** Antigravity IDE on Windows 11
@@ -14,16 +14,17 @@
 
 ---
 
-## S02 Exit Gate Checklist
+## S03 Exit Gate Checklist
 
 | Item | Status | Evidence |
 |---|---|---|
-| Shared types for `Task`, `Session`, `Round`, `Action`, `Approval`, `Evidence`, `ExecutorCapability`, `ProviderIdentity` | ✅ PASS | Exported from `@mediator/shared-contracts` |
-| Stable typed error codes (`PATH_DENIED`, `NONCE_MISMATCH`, `CONVERSATION_MISMATCH`, `CAPABILITY_UNAVAILABLE`, `APPROVAL_REQUIRED`, `TRANSFER_INCOMPLETE`, `CORE_NOT_RUNNING`, `OVERSIZED_INPUT`, etc.) | ✅ PASS | `ErrorCode` table in `packages/shared-contracts/src/index.ts` |
-| Correlation IDs on boundary events (`requestId`, `correlationId`, `taskId`) | ✅ PASS | `BoundaryEvent` and `CorrelationContext` interfaces |
-| Protocol version and schema-validation conventions with Zod | ✅ PASS | `ProtocolEnvelopeSchema`, `ActionSchema` (all 14 actions), `BoundaryEventSchema` |
-| Tests for unknown fields, missing required fields, and oversized input | ✅ PASS | 14 new contract validation tests; 82 total tests passing |
-| Clean import across all packages without uncaught exceptions or silent coercion | ✅ PASS | All validation functions return `Result<T, MediatorError>` |
+| All 18 task/session states defined in pure module | ✅ PASS | `TaskState` in `packages/task-domain/src/index.ts` |
+| Pure transition validator rejects any disallowed state change | ✅ PASS | `validateTransition()` returning typed `INVALID_STATE_TRANSITION` |
+| Pause, stop, timeout, and failure safe transitions | ✅ PASS | `applyTransition()`, `TaskCoordinator.pause()`, `stop()`, `failSafe()` |
+| Enforce one active task in v1 | ✅ PASS | `TaskCoordinator.startSession()` rejects second active task with `TASK_ALREADY_ACTIVE` |
+| Transition-table tests covering allowed and impossible transitions | ✅ PASS | 37 tests in `packages/task-domain/src/index.test.ts` (all 18 states verified) |
+| Stop prevents new round scheduling | ✅ PASS | `canScheduleNewRound()` returns `false` in `STOPPED` and `PAUSED` |
+| No component can directly mutate state | ✅ PASS | Only orchestrator transition API updates encapsulated `_session` |
 
 ---
 
@@ -34,24 +35,22 @@
 | `npm run lint` | 0 | 0 errors, 0 warnings across all `.ts` files | stdout |
 | `npm run typecheck` | 0 | All 5 workspaces typechecked cleanly | stdout |
 | `npm run build` | 0 | All 5 workspaces built cleanly | stdout |
-| `npm test` | 0 | **82 / 82 unit tests passed** (3 test files) | stdout |
+| `npm test` | 0 | **88 / 88 unit tests passed** (3 test files) | stdout |
 
 ---
 
 ## Security tests
 
-- Input size guard enforces `MAX_ENVELOPE_RAW_BYTES = 1 MB` and rejects oversized envelopes with `OVERSIZED_INPUT`.
-- Action limit guard enforces max 50 actions per envelope.
-- Content block limit guard enforces max 20 content blocks per envelope.
-- Base state hash strictly enforced as 64-character hex SHA-256.
-- Boundary event schema strictly enforces `requestId`, `correlationId`, and `taskId` presence.
+- Direct state mutation blocked by encapsulation; state changes require explicit `orchestrator` actor identity.
+- Round count increment occurs only when returning to same chat; max round threshold strictly enforced.
+- Concurrent active tasks rejected fail-safe with `TASK_ALREADY_ACTIVE`.
 
 ---
 
-## Changed / Added files in S02
+## Changed / Added files in S03
 
-- `packages/shared-contracts/src/index.ts` (added domain models, error codes, Zod schemas, validation helpers)
-- `packages/shared-contracts/src/index.test.ts` (added schema validation tests, oversized tests, missing field tests)
+- `packages/task-domain/src/index.ts` (added `TaskCoordinator`, single-active-task enforcement)
+- `packages/task-domain/src/index.test.ts` (added `TaskCoordinator` lifecycle & single-active-task tests)
 - `docs/SPRINT_STATUS.md` (updated)
 
 ---
@@ -65,7 +64,7 @@
 
 ## Next sprint
 
-**S03 — Explicit task/session state machine**
+**S04 — Canonical workspace root**
 
-Dependencies: S02 ✅  
-Goal: Pure state machine with transition validator, pause/stop/timeout/failure transitions, one-active-task enforcement, and impossible transition guards.
+Dependencies: S02 ✅, S03 ✅  
+Goal: Establish the only project root Mediator is allowed to operate in. Canonical path resolution, user confirmation on first attach, separate storage of selected vs canonical path for audit, OneDrive/cloud-placeholder status detection, no hard-coded paths.

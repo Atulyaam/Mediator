@@ -277,4 +277,122 @@ export function createTaskSession(
   };
 }
 
+/**
+ * TaskCoordinator enforces that only one active task session exists at a time in V1.
+ * Only the orchestrator (or coordinator methods) can transition states.
+ * Mutation is encapsulated — external callers receive immutable TaskSession copies.
+ */
+export class TaskCoordinator {
+  private _session: TaskSession | null = null;
+
+  getActiveSession(): TaskSession | null {
+    return this._session;
+  }
+
+  hasActiveTask(): boolean {
+    if (!this._session) return false;
+    return (
+      !isTerminalState(this._session.state) &&
+      this._session.state !== TaskState.STOPPED &&
+      this._session.state !== TaskState.IDLE
+    );
+  }
+
+  startSession(
+    taskId: string,
+    sessionId: string,
+    correlationId: string,
+    maxRounds = 20,
+    now: number = Date.now(),
+  ): Result<TaskSession, MediatorError> {
+    if (this.hasActiveTask()) {
+      return err(
+        makeMediatorError(
+          ErrorCode.TASK_ALREADY_ACTIVE,
+          `Cannot start task ${taskId}: task ${this._session?.taskId ?? ''} is already active in state ${this._session?.state ?? ''}`,
+          { correlationId, taskId, sessionId },
+        ),
+      );
+    }
+
+    const session = createTaskSession(taskId, sessionId, correlationId, maxRounds, now);
+    this._session = session;
+    return ok(session);
+  }
+
+  transition(
+    req: Omit<TransitionRequest, 'actor' | 'from'> & { actor: 'orchestrator' },
+    now: number = Date.now(),
+  ): Result<TaskSession, MediatorError> {
+    if (!this._session) {
+      return err(
+        makeMediatorError(
+          ErrorCode.INVALID_STATE_TRANSITION,
+          'No active session to transition',
+          { correlationId: req.correlationId },
+        ),
+      );
+    }
+
+    const fullReq: TransitionRequest = {
+      from: this._session.state,
+      to: req.to,
+      correlationId: req.correlationId,
+      reason: req.reason,
+      actor: 'orchestrator',
+    };
+
+    const res = applyTransition(this._session, fullReq, now);
+    if (!res.ok) return res;
+
+    this._session = res.value;
+    return ok(this._session);
+  }
+
+  stop(
+    reason: string,
+    correlationId: string,
+    now: number = Date.now(),
+  ): Result<TaskSession, MediatorError> {
+    if (!this._session) {
+      return err(
+        makeMediatorError(ErrorCode.INVALID_STATE_TRANSITION, 'No active session to stop', {
+          correlationId,
+        }),
+      );
+    }
+    return this.transition({ to: TaskState.STOPPED, correlationId, reason, actor: 'orchestrator' }, now);
+  }
+
+  pause(
+    reason: string,
+    correlationId: string,
+    now: number = Date.now(),
+  ): Result<TaskSession, MediatorError> {
+    if (!this._session) {
+      return err(
+        makeMediatorError(ErrorCode.INVALID_STATE_TRANSITION, 'No active session to pause', {
+          correlationId,
+        }),
+      );
+    }
+    return this.transition({ to: TaskState.PAUSED, correlationId, reason, actor: 'orchestrator' }, now);
+  }
+
+  failSafe(
+    reason: string,
+    correlationId: string,
+    now: number = Date.now(),
+  ): Result<TaskSession, MediatorError> {
+    if (!this._session) {
+      return err(
+        makeMediatorError(ErrorCode.INVALID_STATE_TRANSITION, 'No active session to fail-safe', {
+          correlationId,
+        }),
+      );
+    }
+    return this.transition({ to: TaskState.FAILED_SAFE, correlationId, reason, actor: 'orchestrator' }, now);
+  }
+}
+
 export { ALLOWED_TRANSITIONS };

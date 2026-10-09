@@ -7,6 +7,7 @@ import {
   isTerminalState,
   canScheduleNewRound,
   ALLOWED_TRANSITIONS,
+  TaskCoordinator,
 } from './index.js';
 
 // ─── Transition table exhaustiveness test ──────────────────────────────────
@@ -205,6 +206,87 @@ describe('createTaskSession', () => {
     const s = createTaskSession('t1', 's1', 'c1');
     expect(s.state).toBe(TaskState.IDLE);
     expect(s.roundCount).toBe(0);
+  });
+});
+
+describe('S03 — TaskCoordinator (single active task & encapsulation)', () => {
+  it('starts with null session and hasActiveTask is false', () => {
+    const coordinator = new TaskCoordinator();
+    expect(coordinator.getActiveSession()).toBeNull();
+    expect(coordinator.hasActiveTask()).toBe(false);
+  });
+
+  it('starts a session in IDLE state', () => {
+    const coordinator = new TaskCoordinator();
+    const res = coordinator.startSession('task-1', 'session-1', 'corr-1');
+    expect(res.ok).toBe(true);
+    if (res.ok) {
+      expect(res.value.taskId).toBe('task-1');
+      expect(res.value.state).toBe(TaskState.IDLE);
+    }
+  });
+
+  it('transitions state through coordinator API', () => {
+    const coordinator = new TaskCoordinator();
+    coordinator.startSession('task-1', 'session-1', 'corr-1');
+
+    const resAttach = coordinator.transition({ to: TaskState.ATTACHED, correlationId: 'corr-2', actor: 'orchestrator' });
+    expect(resAttach.ok).toBe(true);
+    if (resAttach.ok) {
+      expect(resAttach.value.state).toBe(TaskState.ATTACHED);
+    }
+    expect(coordinator.hasActiveTask()).toBe(true);
+  });
+
+  it('enforces one active task in v1 (rejects second task start when one is active)', () => {
+    const coordinator = new TaskCoordinator();
+    coordinator.startSession('task-1', 'session-1', 'corr-1');
+    coordinator.transition({ to: TaskState.ATTACHED, correlationId: 'corr-2', actor: 'orchestrator' });
+
+    // Attempt to start a second task while task-1 is ATTACHED
+    const resSecond = coordinator.startSession('task-2', 'session-2', 'corr-3');
+    expect(resSecond.ok).toBe(false);
+    if (!resSecond.ok) {
+      expect(resSecond.error.code).toBe('TASK_ALREADY_ACTIVE');
+      expect(resSecond.error.message).toContain('task-1 is already active');
+    }
+  });
+
+  it('allows starting a new task after previous reaches terminal state', () => {
+    const coordinator = new TaskCoordinator();
+    coordinator.startSession('task-1', 'session-1', 'corr-1');
+    coordinator.transition({ to: TaskState.ATTACHED, correlationId: 'corr-2', actor: 'orchestrator' });
+    coordinator.transition({ to: TaskState.FAILED_SAFE, correlationId: 'corr-3', actor: 'orchestrator' });
+
+    expect(coordinator.hasActiveTask()).toBe(false);
+
+    // Now starting a new task should succeed
+    const resSecond = coordinator.startSession('task-2', 'session-2', 'corr-4');
+    expect(resSecond.ok).toBe(true);
+    if (resSecond.ok) {
+      expect(resSecond.value.taskId).toBe('task-2');
+    }
+  });
+
+  it('pauses with reason and stops with reason', () => {
+    const coordinator = new TaskCoordinator();
+    coordinator.startSession('task-1', 'session-1', 'corr-1');
+    coordinator.transition({ to: TaskState.ATTACHED, correlationId: 'corr-2', actor: 'orchestrator' });
+
+    const resPause = coordinator.pause('User requested pause', 'corr-3');
+    expect(resPause.ok).toBe(true);
+    if (resPause.ok) {
+      expect(resPause.value.state).toBe(TaskState.PAUSED);
+      expect(resPause.value.pauseReason).toBe('User requested pause');
+    }
+
+    const resStop = coordinator.stop('User stopped task', 'corr-4');
+    expect(resStop.ok).toBe(true);
+    if (resStop.ok) {
+      expect(resStop.value.state).toBe(TaskState.STOPPED);
+      expect(resStop.value.stopReason).toBe('User stopped task');
+    }
+    expect(coordinator.hasActiveTask()).toBe(false);
   });
 });
 
