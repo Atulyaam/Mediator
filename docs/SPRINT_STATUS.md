@@ -2,7 +2,7 @@
 
 - **Master spec:** Mediator_Final_Development_Plan_v1.3.md
 - **Sprint plan:** Mediator_Sprint_Wise_Development_Plan_v1.3.md
-- **Current sprint:** S01 — Repository scaffold + minimal IDE panel
+- **Current sprint:** S02 — Shared contracts, typed errors, correlation IDs
 - **Status:** PASS
 - **Provider:** Google Gemini (gemini.google.com)
 - **IDE:** Antigravity IDE on Windows 11
@@ -14,17 +14,16 @@
 
 ---
 
-## S01 Exit Gate Checklist
+## S02 Exit Gate Checklist
 
 | Item | Status | Evidence |
 |---|---|---|
-| Monorepo workspace structure (`apps/*`, `packages/*`) | ✅ PASS | `npm workspaces` with `apps/ide-extension`, `apps/browser-extension`, `apps/cli`, `packages/shared-contracts`, `packages/task-domain` |
-| Formatting, lint, typecheck, unit tests, and CI | ✅ PASS | `.eslintrc.json`, `tsconfig.base.json`, `vitest.config.ts`, `.github/workflows/ci.yml` |
-| Clean checkout can install/build/test | ✅ PASS | `npm run lint`, `npm run typecheck`, `npm run build`, `npm test` all exit 0 |
-| IDE status panel showing stopped/running, workspace, capabilities | ✅ PASS | `MediatorPanel` in `apps/ide-extension/src/panel.ts` + `mediatorState.ts` |
-| Start/stop command that changes only local app state | ✅ PASS | `cmdStart` / `cmdStop` in `apps/ide-extension/src/extension.ts`; NO shell execution |
-| CLI mirroring status, capabilities, start, stop | ✅ PASS | `@mediator/cli` in `apps/cli/src/index.ts` |
-| No privileged execution path in IDE panel or CLI | ✅ PASS | Executor disabled; zero process execution calls |
+| Shared types for `Task`, `Session`, `Round`, `Action`, `Approval`, `Evidence`, `ExecutorCapability`, `ProviderIdentity` | ✅ PASS | Exported from `@mediator/shared-contracts` |
+| Stable typed error codes (`PATH_DENIED`, `NONCE_MISMATCH`, `CONVERSATION_MISMATCH`, `CAPABILITY_UNAVAILABLE`, `APPROVAL_REQUIRED`, `TRANSFER_INCOMPLETE`, `CORE_NOT_RUNNING`, `OVERSIZED_INPUT`, etc.) | ✅ PASS | `ErrorCode` table in `packages/shared-contracts/src/index.ts` |
+| Correlation IDs on boundary events (`requestId`, `correlationId`, `taskId`) | ✅ PASS | `BoundaryEvent` and `CorrelationContext` interfaces |
+| Protocol version and schema-validation conventions with Zod | ✅ PASS | `ProtocolEnvelopeSchema`, `ActionSchema` (all 14 actions), `BoundaryEventSchema` |
+| Tests for unknown fields, missing required fields, and oversized input | ✅ PASS | 14 new contract validation tests; 82 total tests passing |
+| Clean import across all packages without uncaught exceptions or silent coercion | ✅ PASS | All validation functions return `Result<T, MediatorError>` |
 
 ---
 
@@ -33,42 +32,27 @@
 | Command | Exit code | Result | Evidence |
 |---|---:|---|---|
 | `npm run lint` | 0 | 0 errors, 0 warnings across all `.ts` files | stdout |
-| `npm run typecheck` | 0 | 5 workspaces typechecked cleanly | stdout |
-| `npm run build` | 0 | 5 workspaces built cleanly | stdout |
-| `npm test` | 0 | **68 / 68 unit tests passed** (3 test files) | stdout |
-| `node apps/cli/dist/index.js status` | 0 | Displays Review-only status report | stdout |
-| `node apps/cli/dist/index.js capabilities` | 0 | Displays capability report (executor disabled) | stdout |
-| `node apps/cli/dist/index.js start` | 0 | Confirms local state change only | stdout |
+| `npm run typecheck` | 0 | All 5 workspaces typechecked cleanly | stdout |
+| `npm run build` | 0 | All 5 workspaces built cleanly | stdout |
+| `npm test` | 0 | **82 / 82 unit tests passed** (3 test files) | stdout |
 
 ---
 
 ## Security tests
 
-- Verified that `apps/ide-extension` and `apps/cli` contain zero child process spawns, shell executions, or network connections.
-- Verified that `isExecutorSufficientForAutoExec` returns `false` whenever live workspace is writable or capabilities are unknown.
-- Secret patterns added to `.gitignore`. No synthetic test secrets committed.
+- Input size guard enforces `MAX_ENVELOPE_RAW_BYTES = 1 MB` and rejects oversized envelopes with `OVERSIZED_INPUT`.
+- Action limit guard enforces max 50 actions per envelope.
+- Content block limit guard enforces max 20 content blocks per envelope.
+- Base state hash strictly enforced as 64-character hex SHA-256.
+- Boundary event schema strictly enforces `requestId`, `correlationId`, and `taskId` presence.
 
 ---
 
-## Changed / Added files in S01
+## Changed / Added files in S02
 
-- `.eslintrc.json` (new)
-- `.github/workflows/ci.yml` (new)
-- `apps/ide-extension/` (new: `package.json`, `tsconfig.json`, `src/extension.ts`, `src/panel.ts`, `src/mediatorState.ts`, `src/mediatorState.test.ts`)
-- `apps/browser-extension/` (new: `package.json`, `tsconfig.json`, `manifest.json`, `src/index.ts`)
-- `apps/cli/` (new: `package.json`, `tsconfig.json`, `src/index.ts`)
-- `packages/task-domain/` (new: `package.json`, `tsconfig.json`, `src/index.ts`, `src/index.test.ts`)
-- `packages/shared-contracts/src/index.ts` (updated PROTOCOL_VERSION type assertion)
-- `package.json` (configured workspaces, root scripts)
-- `tsconfig.json` (project references for build)
+- `packages/shared-contracts/src/index.ts` (added domain models, error codes, Zod schemas, validation helpers)
+- `packages/shared-contracts/src/index.test.ts` (added schema validation tests, oversized tests, missing field tests)
 - `docs/SPRINT_STATUS.md` (updated)
-
----
-
-## Known limitations / unverified assumptions
-
-- IDE webview is tested via pure unit tests (`mediatorState.test.ts`); full in-editor webview rendering was not inspected inside an extension development host (headless test environment).
-- Browser extension shell (`apps/browser-extension`) is scaffolded with manifest V3 and stub entrypoint; provider DOM adapter implementation scheduled for S18.
 
 ---
 
@@ -81,7 +65,7 @@
 
 ## Next sprint
 
-**S02 — Shared contracts, typed errors and correlation IDs**
+**S03 — Explicit task/session state machine**
 
-Dependencies: S01 ✅  
-Goal: Comprehensive shared types (`Task`, `Session`, `Round`, `Action`, `Approval`, `Evidence`, `ExecutorCapability`, `ProviderIdentity`), stable typed error codes, boundary correlation IDs, and input schema validation tests.
+Dependencies: S02 ✅  
+Goal: Pure state machine with transition validator, pause/stop/timeout/failure transitions, one-active-task enforcement, and impossible transition guards.

@@ -6,6 +6,8 @@
  * It is a pure type/validation library importable by all other packages.
  */
 
+import { z } from 'zod';
+
 // ─── Protocol version ──────────────────────────────────────────────────────
 
 export const PROTOCOL_VERSION = '1.3';
@@ -15,6 +17,7 @@ export type ProtocolVersion = typeof PROTOCOL_VERSION;
 
 export const ErrorCode = {
   // Path / workspace boundary
+  PATH_DENIED: 'PATH_DENIED',
   PATH_OUTSIDE_ROOT: 'PATH_OUTSIDE_ROOT',
   PATH_TRAVERSAL: 'PATH_TRAVERSAL',
   PATH_ALTERNATE_DATA_STREAM: 'PATH_ALTERNATE_DATA_STREAM',
@@ -30,12 +33,14 @@ export const ErrorCode = {
   SEQUENCE_DUPLICATE: 'SEQUENCE_DUPLICATE',
   ACTION_ID_DUPLICATE: 'ACTION_ID_DUPLICATE',
   CONVERSATION_CHANGED: 'CONVERSATION_CHANGED',
+  CONVERSATION_MISMATCH: 'CONVERSATION_MISMATCH',
   BASE_STATE_HASH_MISMATCH: 'BASE_STATE_HASH_MISMATCH',
   TRANSFER_INCOMPLETE: 'TRANSFER_INCOMPLETE',
   TRANSFER_HASH_MISMATCH: 'TRANSFER_HASH_MISMATCH',
   ENVELOPE_EXPIRED: 'ENVELOPE_EXPIRED',
   PROTOCOL_VERSION_UNSUPPORTED: 'PROTOCOL_VERSION_UNSUPPORTED',
   SCHEMA_INVALID: 'SCHEMA_INVALID',
+  OVERSIZED_INPUT: 'OVERSIZED_INPUT',
   CONTENT_BLOCK_MISSING: 'CONTENT_BLOCK_MISSING',
   CONTENT_BLOCK_DUPLICATE: 'CONTENT_BLOCK_DUPLICATE',
 
@@ -114,11 +119,26 @@ export function err<E>(error: E): Result<never, E> {
 // ─── Correlation / tracing IDs ─────────────────────────────────────────────
 
 export interface CorrelationContext {
+  readonly requestId?: string | undefined;
   readonly taskId: string;
   readonly sessionId: string;
-  readonly roundId?: string;
+  readonly roundId?: string | undefined;
   readonly correlationId: string;
-  readonly actionId?: string;
+  readonly actionId?: string | undefined;
+}
+
+// ─── Boundary event ────────────────────────────────────────────────────────
+
+export interface BoundaryEvent<T = unknown> {
+  readonly eventId: string;
+  readonly requestId: string;
+  readonly correlationId: string;
+  readonly taskId: string;
+  readonly sessionId?: string | undefined;
+  readonly timestamp: number;
+  readonly source: 'ide' | 'browser' | 'cli' | 'mcp' | 'core';
+  readonly type: string;
+  readonly payload: T;
 }
 
 // ─── Task / session states ─────────────────────────────────────────────────
@@ -211,14 +231,61 @@ export const EnvelopeStatus = {
 
 export type EnvelopeStatusValue = (typeof EnvelopeStatus)[keyof typeof EnvelopeStatus];
 
-// ─── Conversation identity ─────────────────────────────────────────────────
+// ─── Provider & Conversation identity ──────────────────────────────────────
 
-export interface ConversationIdentity {
+export interface ProviderIdentity {
   readonly provider: string;
   readonly conversationId: string;
-  readonly tabId?: number;
-  readonly messageId?: string;
-  readonly branchId?: string;
+  readonly tabId?: number | undefined;
+  readonly messageId?: string | undefined;
+  readonly branchId?: string | undefined;
+  readonly chatTitle?: string | undefined;
+}
+
+export type ConversationIdentity = ProviderIdentity;
+
+// ─── Shared Task, Session, Round, Evidence ─────────────────────────────────
+
+export interface Task {
+  readonly id: string;
+  readonly title: string;
+  readonly description: string;
+  readonly workspaceRoot: string;
+  readonly createdAt: number;
+  readonly updatedAt: number;
+  readonly state: TaskStateValue;
+  readonly maxRounds: number;
+}
+
+export interface Session {
+  readonly id: string;
+  readonly taskId: string;
+  readonly createdAt: number;
+  readonly updatedAt: number;
+  readonly provider: ProviderIdentity;
+  readonly state: TaskStateValue;
+}
+
+export interface Round {
+  readonly roundNumber: number;
+  readonly taskId: string;
+  readonly sessionId: string;
+  readonly correlationId: string;
+  readonly nonce: string;
+  readonly startedAt: number;
+  readonly completedAt?: number | undefined;
+  readonly status: 'pending' | 'in_progress' | 'completed' | 'failed';
+  readonly actionCount: number;
+}
+
+export interface Evidence {
+  readonly id: string;
+  readonly level: EvidenceLevelValue;
+  readonly source: string;
+  readonly timestamp: number;
+  readonly summary: string;
+  readonly artifactRef?: string | undefined;
+  readonly rawDetails?: Record<string, unknown> | undefined;
 }
 
 // ─── Action definitions ────────────────────────────────────────────────────
@@ -477,4 +544,246 @@ export interface AuditEvent {
   readonly actor: 'user' | 'mediator' | 'ai-provider' | 'ide-agent' | 'mcp-caller';
   readonly outcome: 'allowed' | 'denied' | 'pending' | 'error';
   readonly detail: Record<string, unknown>; // must be pre-redacted — no secrets
+}
+
+// ─── Aliases ───────────────────────────────────────────────────────────────
+
+export type Action = AnyAction;
+export type Approval = PendingApproval | ResolvedApproval;
+
+// ─── Zod Schemas & Validation ──────────────────────────────────────────────
+
+export const ProviderIdentitySchema = z.object({
+  provider: z.string().min(1),
+  conversationId: z.string().min(1),
+  tabId: z.number().int().positive().optional(),
+  messageId: z.string().optional(),
+  branchId: z.string().optional(),
+  chatTitle: z.string().optional(),
+});
+
+export const ContentBlockSchema = z.object({
+  id: z.string().min(1),
+  delimiter: z.string().min(1),
+  encoding: z.literal('utf-8'),
+  byteLength: z.number().int().nonnegative(),
+  sha256: z.string().regex(/^[a-f0-9]{64}$/i, 'Must be valid 64-char sha256 hex string'),
+});
+
+export const ListFilesActionSchema = z.object({
+  id: z.string().min(1),
+  type: z.literal('list_files'),
+  pathPrefix: z.string(),
+  limit: z.number().int().positive().max(1000),
+});
+
+export const ReadFileActionSchema = z.object({
+  id: z.string().min(1),
+  type: z.literal('read_file'),
+  path: z.string().min(1),
+  rangeStart: z.number().int().nonnegative().optional(),
+  rangeEnd: z.number().int().positive().optional(),
+});
+
+export const SearchTextActionSchema = z.object({
+  id: z.string().min(1),
+  type: z.literal('search_text'),
+  query: z.string().min(1),
+  pathGlob: z.string().optional(),
+  limit: z.number().int().positive().max(500),
+});
+
+export const GetDiagnosticsActionSchema = z.object({
+  id: z.string().min(1),
+  type: z.literal('get_diagnostics'),
+  path: z.string().optional(),
+});
+
+export const GetDiffActionSchema = z.object({
+  id: z.string().min(1),
+  type: z.literal('get_diff'),
+  fileSelector: z.string().optional(),
+});
+
+export const RequestMoreContextActionSchema = z.object({
+  id: z.string().min(1),
+  type: z.literal('request_more_context'),
+  reason: z.string().min(1),
+  topicHints: z.array(z.string()).optional(),
+  pathHints: z.array(z.string()).optional(),
+  byteBudget: z.number().int().positive().optional(),
+});
+
+export const ProposePatchActionSchema = z.object({
+  id: z.string().min(1),
+  type: z.literal('propose_patch'),
+  path: z.string().min(1),
+  expectedBaseHash: z.string().regex(/^[a-f0-9]{64}$/i, 'Must be valid 64-char sha256 hex string'),
+  contentBlockId: z.string().min(1),
+});
+
+export const RequestRecipeRunActionSchema = z.object({
+  id: z.string().min(1),
+  type: z.literal('request_recipe_run'),
+  recipeId: z.string().min(1),
+  parameters: z.record(z.string()),
+});
+
+export const RequestDependencyChangeActionSchema = z.object({
+  id: z.string().min(1),
+  type: z.literal('request_dependency_change'),
+  ecosystem: z.string().min(1),
+  name: z.string().min(1),
+  version: z.string().min(1),
+  rationale: z.string().min(1),
+});
+
+export const RequestNetworkAccessActionSchema = z.object({
+  id: z.string().min(1),
+  type: z.literal('request_network_access'),
+  domains: z.array(z.string()),
+  reason: z.string().min(1),
+  durationSeconds: z.number().int().positive().max(3600),
+});
+
+export const RequestDeleteActionSchema = z.object({
+  id: z.string().min(1),
+  type: z.literal('request_delete'),
+  path: z.string().min(1),
+  expectedHash: z.string().regex(/^[a-f0-9]{64}$/i, 'Must be valid 64-char sha256 hex string'),
+});
+
+export const RequestRenameActionSchema = z.object({
+  id: z.string().min(1),
+  type: z.literal('request_rename'),
+  sourcePath: z.string().min(1),
+  destinationPath: z.string().min(1),
+  sourceHash: z.string().regex(/^[a-f0-9]{64}$/i, 'Must be valid 64-char sha256 hex string'),
+});
+
+export const AskUserActionSchema = z.object({
+  id: z.string().min(1),
+  type: z.literal('ask_user'),
+  question: z.string().min(1),
+  options: z.array(z.string()).optional(),
+});
+
+export const ReportProgressActionSchema = z.object({
+  id: z.string().min(1),
+  type: z.literal('report_progress'),
+  summary: z.string().min(1),
+  referencedActionIds: z.array(z.string()).optional(),
+});
+
+export const ActionSchema = z.discriminatedUnion('type', [
+  ListFilesActionSchema,
+  ReadFileActionSchema,
+  SearchTextActionSchema,
+  GetDiagnosticsActionSchema,
+  GetDiffActionSchema,
+  RequestMoreContextActionSchema,
+  ProposePatchActionSchema,
+  RequestRecipeRunActionSchema,
+  RequestDependencyChangeActionSchema,
+  RequestNetworkAccessActionSchema,
+  RequestDeleteActionSchema,
+  RequestRenameActionSchema,
+  AskUserActionSchema,
+  ReportProgressActionSchema,
+]);
+
+export const ProtocolEnvelopeSchema = z.object({
+  protocolVersion: z.literal(PROTOCOL_VERSION),
+  taskId: z.string().min(1),
+  sessionId: z.string().min(1),
+  nonce: z.string().min(8),
+  round: z.number().int().nonnegative(),
+  sequence: z.number().int().nonnegative(),
+  conversation: ProviderIdentitySchema,
+  baseStateHash: z.string().regex(/^[a-f0-9]{64}$/i, 'Must be valid 64-char sha256 hex string'),
+  status: z.enum([EnvelopeStatus.CONTINUE, EnvelopeStatus.AWAIT_USER, EnvelopeStatus.PROPOSED_COMPLETE]),
+  actions: z.array(ActionSchema).max(50),
+  contentBlocks: z.array(ContentBlockSchema).max(20),
+});
+
+export const BoundaryEventSchema = z.object({
+  eventId: z.string().min(1),
+  requestId: z.string().min(1),
+  correlationId: z.string().min(1),
+  taskId: z.string().min(1),
+  sessionId: z.string().optional(),
+  timestamp: z.number().int().positive(),
+  source: z.enum(['ide', 'browser', 'cli', 'mcp', 'core']),
+  type: z.string().min(1),
+  payload: z.unknown(),
+});
+
+// ─── Schema Validation Helpers ─────────────────────────────────────────────
+
+export const MAX_ENVELOPE_RAW_BYTES = 1024 * 1024; // 1 MB limit
+
+export function validateProtocolEnvelope(input: unknown): Result<ProtocolEnvelope, MediatorError> {
+  if (typeof input !== 'object' || input === null) {
+    return err(
+      makeMediatorError(ErrorCode.SCHEMA_INVALID, 'Envelope input must be a non-null object', {
+        detail: { receivedType: typeof input },
+      }),
+    );
+  }
+
+  // Size guard on raw JSON representation
+  try {
+    const rawString = JSON.stringify(input);
+    if (rawString.length > MAX_ENVELOPE_RAW_BYTES) {
+      return err(
+        makeMediatorError(
+          ErrorCode.OVERSIZED_INPUT,
+          `Envelope exceeds maximum size of ${MAX_ENVELOPE_RAW_BYTES} bytes (actual: ${rawString.length} bytes)`,
+          { detail: { byteLength: rawString.length, maxAllowed: MAX_ENVELOPE_RAW_BYTES } },
+        ),
+      );
+    }
+  } catch (serializationErr) {
+    return err(
+      makeMediatorError(ErrorCode.SCHEMA_INVALID, 'Envelope input cannot be serialized to JSON', {
+        detail: { error: String(serializationErr) },
+      }),
+    );
+  }
+
+  const parseResult = ProtocolEnvelopeSchema.safeParse(input);
+  if (!parseResult.success) {
+    const firstIssue = parseResult.error.issues[0];
+    const pathStr = firstIssue ? firstIssue.path.join('.') : 'root';
+    const message = firstIssue ? `${pathStr}: ${firstIssue.message}` : 'Schema validation failed';
+    return err(
+      makeMediatorError(ErrorCode.SCHEMA_INVALID, `Protocol envelope schema invalid: ${message}`, {
+        detail: { issues: parseResult.error.issues },
+      }),
+    );
+  }
+
+  return ok(parseResult.data as ProtocolEnvelope);
+}
+
+export function validateBoundaryEvent<T = unknown>(input: unknown): Result<BoundaryEvent<T>, MediatorError> {
+  if (typeof input !== 'object' || input === null) {
+    return err(
+      makeMediatorError(ErrorCode.SCHEMA_INVALID, 'Boundary event must be a non-null object'),
+    );
+  }
+
+  const parseResult = BoundaryEventSchema.safeParse(input);
+  if (!parseResult.success) {
+    const firstIssue = parseResult.error.issues[0];
+    const pathStr = firstIssue ? firstIssue.path.join('.') : 'root';
+    return err(
+      makeMediatorError(
+        ErrorCode.SCHEMA_INVALID,
+        `Boundary event schema invalid at ${pathStr}: ${firstIssue?.message ?? 'unknown'}`,
+      ),
+    );
+  }
+
+  return ok(parseResult.data as BoundaryEvent<T>);
 }
