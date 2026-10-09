@@ -6,7 +6,13 @@
     "tsBuildInfoFile": "./dist/.tsbuildinfo",
     "module": "CommonJS",
     "moduleResolution": "Node",
-    "lib": ["ES2022"]
+    "lib": ["ES2022"],
+    "baseUrl": ".",
+    "paths": {
+      "@mediator/shared-contracts": ["../../packages/shared-contracts/dist/index.d.ts"],
+      "@mediator/task-domain": ["../../packages/task-domain/dist/index.d.ts"],
+      "@mediator/workspace-boundary": ["../../packages/workspace-boundary/dist/index.d.ts"]
+    }
   },
   "references": [
     { "path": "../../packages/shared-contracts" },

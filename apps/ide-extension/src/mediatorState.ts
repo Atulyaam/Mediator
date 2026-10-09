@@ -5,8 +5,13 @@
  * The only mutations here are to in-memory state and VS Code UI.
  */
 
-import { TaskState, type TaskStateValue, createTaskSession, applyTransition } from '@mediator/task-domain';
-import { type TaskSession } from '@mediator/task-domain';
+import {
+  TaskState,
+  type TaskStateValue,
+  type TaskSession,
+  createTaskSession,
+  applyTransition,
+} from '@mediator/task-domain';
 import { type ExecutorCapability } from '@mediator/shared-contracts';
 import {
   type WorkspaceRootState,
