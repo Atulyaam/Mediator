@@ -7,6 +7,10 @@ export default defineConfig({
       '@mediator/shared-contracts': resolve(__dirname, 'packages/shared-contracts/src/index.ts'),
       '@mediator/task-domain': resolve(__dirname, 'packages/task-domain/src/index.ts'),
       '@mediator/workspace-boundary': resolve(__dirname, 'packages/workspace-boundary/src/index.ts'),
+      '@mediator/context-security': resolve(__dirname, 'packages/context-security/src/index.ts'),
+      '@mediator/policy-engine': resolve(__dirname, 'packages/policy-engine/src/index.ts'),
+      '@mediator/protocol': resolve(__dirname, 'packages/protocol/src/index.ts'),
+      '@mediator/content-transfer': resolve(__dirname, 'packages/content-transfer/src/index.ts'),
     },
   },
   test: {

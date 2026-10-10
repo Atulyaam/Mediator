@@ -1,0 +1,19 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "tsBuildInfoFile": "./dist/.tsbuildinfo",
+    "baseUrl": ".",
+    "paths": {
+      "@mediator/shared-contracts": ["../../packages/shared-contracts/dist/index.d.ts"],
+      "@mediator/workspace-boundary": ["../../packages/workspace-boundary/dist/index.d.ts"]
+    }
+  },
+  "references": [
+    { "path": "../../packages/shared-contracts" },
+    { "path": "../../packages/workspace-boundary" }
+  ],
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "src/**/*.test.ts"]
+}

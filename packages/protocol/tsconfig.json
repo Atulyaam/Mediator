@@ -1,0 +1,21 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "tsBuildInfoFile": "./dist/.tsbuildinfo",
+    "baseUrl": ".",
+    "paths": {
+      "@mediator/shared-contracts": ["../../packages/shared-contracts/dist/index.d.ts"],
+      "@mediator/task-domain": ["../../packages/task-domain/dist/index.d.ts"],
+      "@mediator/policy-engine": ["../../packages/policy-engine/dist/index.d.ts"]
+    }
+  },
+  "references": [
+    { "path": "../../packages/shared-contracts" },
+    { "path": "../../packages/task-domain" },
+    { "path": "../../packages/policy-engine" }
+  ],
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "src/**/*.test.ts"]
+}

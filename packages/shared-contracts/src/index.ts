@@ -37,12 +37,22 @@ export const ErrorCode = {
 
   // Protocol / session
   NONCE_MISMATCH: 'NONCE_MISMATCH',
+  SESSION_MISMATCH: 'SESSION_MISMATCH',
+  TASK_MISMATCH: 'TASK_MISMATCH',
   ROUND_STALE: 'ROUND_STALE',
   SEQUENCE_DUPLICATE: 'SEQUENCE_DUPLICATE',
+  SEQUENCE_OUT_OF_ORDER: 'SEQUENCE_OUT_OF_ORDER',
   ACTION_ID_DUPLICATE: 'ACTION_ID_DUPLICATE',
+  PACKET_ALREADY_CONSUMED: 'PACKET_ALREADY_CONSUMED',
   CONVERSATION_CHANGED: 'CONVERSATION_CHANGED',
   CONVERSATION_MISMATCH: 'CONVERSATION_MISMATCH',
+  BRANCH_MISMATCH: 'BRANCH_MISMATCH',
+  MESSAGE_ID_MISMATCH: 'MESSAGE_ID_MISMATCH',
+  IDENTITY_UNCERTAIN: 'IDENTITY_UNCERTAIN',
   BASE_STATE_HASH_MISMATCH: 'BASE_STATE_HASH_MISMATCH',
+  STATUS_INVALID: 'STATUS_INVALID',
+  CONFLICTING_COMPLETION_SIGNAL: 'CONFLICTING_COMPLETION_SIGNAL',
+  TAMPERING_DETECTED: 'TAMPERING_DETECTED',
   TRANSFER_INCOMPLETE: 'TRANSFER_INCOMPLETE',
   TRANSFER_HASH_MISMATCH: 'TRANSFER_HASH_MISMATCH',
   ENVELOPE_EXPIRED: 'ENVELOPE_EXPIRED',
@@ -234,6 +244,7 @@ export const MANUAL_REVIEW_REQUIRED_ACTIONS = new Set<ActionTypeValue>([
 export const EnvelopeStatus = {
   CONTINUE: 'continue',
   AWAIT_USER: 'await_user',
+  COMPLETE: 'complete',
   PROPOSED_COMPLETE: 'proposed_complete',
 } as const;
 
@@ -748,7 +759,12 @@ export const ProtocolEnvelopeSchema = z.object({
   sequence: z.number().int().nonnegative(),
   conversation: ProviderIdentitySchema,
   baseStateHash: z.string().regex(/^[a-f0-9]{64}$/i, 'Must be valid 64-char sha256 hex string'),
-  status: z.enum([EnvelopeStatus.CONTINUE, EnvelopeStatus.AWAIT_USER, EnvelopeStatus.PROPOSED_COMPLETE]),
+  status: z.enum([
+    EnvelopeStatus.CONTINUE,
+    EnvelopeStatus.AWAIT_USER,
+    EnvelopeStatus.COMPLETE,
+    EnvelopeStatus.PROPOSED_COMPLETE,
+  ]),
   actions: z.array(ActionSchema).max(50),
   contentBlocks: z.array(ContentBlockSchema).max(20),
 });
