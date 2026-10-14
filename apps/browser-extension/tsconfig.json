@@ -6,8 +6,17 @@
     "tsBuildInfoFile": "./dist/.tsbuildinfo",
     "module": "Node16",
     "moduleResolution": "Node16",
-    "lib": ["DOM", "DOM.Iterable", "ES2022"]
+    "lib": ["DOM", "DOM.Iterable", "ES2022"],
+    "baseUrl": ".",
+    "paths": {
+      "@mediator/shared-contracts": ["../../packages/shared-contracts/dist/index.d.ts"],
+      "@mediator/protocol": ["../../packages/protocol/dist/index.d.ts"]
+    }
   },
+  "references": [
+    { "path": "../../packages/shared-contracts" },
+    { "path": "../../packages/protocol" }
+  ],
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]
 }

@@ -1,0 +1,41 @@
+{
+  "name": "@mediator/orchestrator",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "clean": "rimraf dist *.tsbuildinfo"
+  },
+  "dependencies": {
+    "@mediator/shared-contracts": "*",
+    "@mediator/task-domain": "*",
+    "@mediator/workspace-boundary": "*",
+    "@mediator/context-security": "*",
+    "@mediator/policy-engine": "*",
+    "@mediator/protocol": "*",
+    "@mediator/stage-store": "*",
+    "@mediator/persistence": "*",
+    "@mediator/executor-contract": "*",
+    "@mediator/recipe-registry": "*",
+    "@mediator/provider-core": "*",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.5.0",
+    "typescript": "*",
+    "vitest": "*"
+  }
+}

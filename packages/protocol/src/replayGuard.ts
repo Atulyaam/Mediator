@@ -394,4 +394,18 @@ export class ReplayGuard {
     this.consumeEnvelope(envelope);
     return ok(envelope);
   }
+
+  /**
+   * Seed previously consumed action IDs and packet hashes (e.g. upon persistent crash recovery).
+   */
+  public seedConsumedState(actionIds: Iterable<string>, packetHashes?: Iterable<string>): void {
+    for (const id of actionIds) {
+      this.consumedActionIds.add(id);
+    }
+    if (packetHashes) {
+      for (const h of packetHashes) {
+        this.consumedPacketHashes.add(h);
+      }
+    }
+  }
 }

@@ -8,13 +8,31 @@
     "paths": {
       "@mediator/shared-contracts": ["../../packages/shared-contracts/dist/index.d.ts"],
       "@mediator/task-domain": ["../../packages/task-domain/dist/index.d.ts"],
-      "@mediator/workspace-boundary": ["../../packages/workspace-boundary/dist/index.d.ts"]
+      "@mediator/workspace-boundary": ["../../packages/workspace-boundary/dist/index.d.ts"],
+      "@mediator/context-security": ["../../packages/context-security/dist/index.d.ts"],
+      "@mediator/policy-engine": ["../../packages/policy-engine/dist/index.d.ts"],
+      "@mediator/protocol": ["../../packages/protocol/dist/index.d.ts"],
+      "@mediator/stage-store": ["../../packages/stage-store/dist/index.d.ts"],
+      "@mediator/persistence": ["../../packages/persistence/dist/index.d.ts"],
+      "@mediator/executor-contract": ["../../packages/executor-contract/dist/index.d.ts"],
+      "@mediator/recipe-registry": ["../../packages/recipe-registry/dist/index.d.ts"],
+      "@mediator/provider-core": ["../../packages/provider-core/dist/index.d.ts"],
+      "@mediator/orchestrator": ["../../packages/orchestrator/dist/index.d.ts"]
     }
   },
   "references": [
     { "path": "../../packages/shared-contracts" },
     { "path": "../../packages/task-domain" },
-    { "path": "../../packages/workspace-boundary" }
+    { "path": "../../packages/workspace-boundary" },
+    { "path": "../../packages/context-security" },
+    { "path": "../../packages/policy-engine" },
+    { "path": "../../packages/protocol" },
+    { "path": "../../packages/stage-store" },
+    { "path": "../../packages/persistence" },
+    { "path": "../../packages/executor-contract" },
+    { "path": "../../packages/recipe-registry" },
+    { "path": "../../packages/provider-core" },
+    { "path": "../../packages/orchestrator" }
   ],
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "src/**/*.test.ts"]

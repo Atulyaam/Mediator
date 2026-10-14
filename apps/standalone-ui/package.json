@@ -1,0 +1,9 @@
+{
+  "name": "@mediator/standalone-ui",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Mediator Standalone UI — Autonomous Coding Platform Dashboard",
+  "scripts": {
+    "test": "vitest run"
+  }
+}

@@ -15,7 +15,16 @@
   "dependencies": {
     "@mediator/shared-contracts": "*",
     "@mediator/task-domain": "*",
-    "@mediator/workspace-boundary": "*"
+    "@mediator/workspace-boundary": "*",
+    "@mediator/context-security": "*",
+    "@mediator/policy-engine": "*",
+    "@mediator/protocol": "*",
+    "@mediator/stage-store": "*",
+    "@mediator/persistence": "*",
+    "@mediator/executor-contract": "*",
+    "@mediator/recipe-registry": "*",
+    "@mediator/provider-core": "*",
+    "@mediator/orchestrator": "*"
   },
   "devDependencies": {
     "typescript": "*",

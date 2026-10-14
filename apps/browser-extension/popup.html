@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Mediator AI Bridge</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      width: 320px;
+      margin: 0;
+      padding: 14px;
+      background: #0f172a;
+      color: #f8fafc;
+      font-size: 13px;
+    }
+    h1 {
+      font-size: 15px;
+      margin: 0 0 10px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #334155;
+      padding-bottom: 8px;
+    }
+    .badge-disconnected {
+      font-size: 10px;
+      background: #475569;
+      color: #cbd5e1;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: normal;
+    }
+    .row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+    .label {
+      color: #94a3b8;
+    }
+    .val {
+      font-weight: 600;
+    }
+    .pause-box {
+      background: #451a03;
+      border: 1px solid #b45309;
+      color: #fde68a;
+      padding: 6px 10px;
+      border-radius: 4px;
+      margin: 10px 0;
+      display: none;
+      font-size: 12px;
+    }
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    button {
+      flex: 1;
+      background: #2563eb;
+      color: #ffffff;
+      border: none;
+      padding: 6px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    button.btn-danger {
+      background: #dc2626;
+    }
+    button:hover {
+      opacity: 0.9;
+    }
+    .draft-box {
+      margin-top: 12px;
+      border-top: 1px solid #334155;
+      padding-top: 10px;
+    }
+    textarea {
+      width: 100%;
+      box-sizing: border-box;
+      height: 60px;
+      background: #1e293b;
+      border: 1px solid #475569;
+      color: #f8fafc;
+      border-radius: 4px;
+      padding: 6px;
+      font-size: 12px;
+      margin-bottom: 6px;
+      resize: vertical;
+    }
+    .status-msg {
+      font-size: 11px;
+      color: #94a3b8;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+  <h1>
+    Mediator Bridge
+    <span class="badge-disconnected">Core Disconnected (S18 Shell)</span>
+  </h1>
+
+  <div class="row">
+    <span class="label">Select Provider:</span>
+    <select id="provider-select" style="background:#1e293b; color:#f8fafc; border:1px solid #475569; border-radius:4px; padding:2px 6px;">
+      <option value="gemini">Google Gemini</option>
+      <option value="openai">OpenAI ChatGPT</option>
+      <option value="claude">Anthropic Claude</option>
+      <option value="deepseek">DeepSeek</option>
+    </select>
+  </div>
+  <div class="row">
+    <span class="label">Active Mode:</span>
+    <span class="val" id="mode-text">Browser Bridge (Mode A)</span>
+  </div>
+  <div class="row">
+    <span class="label">Attach Status:</span>
+    <span class="val" id="status-text">DETACHED</span>
+  </div>
+  <div class="row">
+    <span class="label">Detected Provider:</span>
+    <span class="val" id="provider-name">None</span>
+  </div>
+  <div class="row">
+    <span class="label">Conversation:</span>
+    <span class="val" id="conversation-id">None</span>
+  </div>
+
+  <div class="pause-box" id="pause-reason"></div>
+
+  <div class="btn-row">
+    <button id="btn-attach">Attach</button>
+    <button id="btn-detach" class="btn-danger" style="display:none;">Detach</button>
+  </div>
+
+  <div class="draft-box">
+    <div style="font-weight:600; margin-bottom:4px;">Manual Message Draft</div>
+    <textarea id="draft-area" placeholder="Enter bounded message draft..."></textarea>
+    <button id="btn-prepare-draft">Prepare Draft</button>
+    <div class="status-msg" id="draft-status"></div>
+  </div>
+
+  <script src="dist/popup.js"></script>
+</body>
+</html>

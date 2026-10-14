@@ -12,11 +12,40 @@ import {
   createTaskSession,
   applyTransition,
 } from '@mediator/task-domain';
-import { type ExecutorCapability } from '@mediator/shared-contracts';
+import {
+  type ExecutorCapability,
+  type CapabilityStatus,
+  type CanonicalProviderId,
+  type ProviderMode,
+  type ProviderConnectionStatus,
+} from '@mediator/shared-contracts';
 import {
   type WorkspaceRootState,
   inspectWorkspaceRoot,
 } from '@mediator/workspace-boundary';
+import { type ReviewPanelState } from './diffPanelController.js';
+import { type HandoffPanelState } from './handoffPanelController.js';
+
+// ─── Multi-Provider State (S29) ───────────────────────────────────────────
+
+export interface ProviderItemState {
+  readonly id: CanonicalProviderId;
+  readonly name: string;
+  readonly supportedModes: readonly ProviderMode[];
+  readonly status: ProviderConnectionStatus;
+  readonly hasCredential: boolean;
+  readonly keyLastFour?: string | undefined;
+  readonly selectedModelId: string;
+  readonly availableModels: readonly string[];
+  readonly lastError?: string | undefined;
+}
+
+export interface ProviderSelectionState {
+  readonly activeProviderId: CanonicalProviderId;
+  readonly activeMode: ProviderMode;
+  readonly activeModelId: string;
+  readonly providers: readonly ProviderItemState[];
+}
 
 // ─── Mediator run state ────────────────────────────────────────────────────
 
@@ -29,6 +58,9 @@ export interface MediatorLocalState {
   readonly workspaceConfirmed: boolean;
   readonly taskSession: TaskSession | null;
   readonly capabilities: DetectedCapabilities;
+  readonly reviewState: ReviewPanelState | null;
+  readonly handoffState: HandoffPanelState | null;
+  readonly providerState: ProviderSelectionState;
   readonly errorMessage: string | null;
   readonly version: string;
 }
@@ -42,7 +74,7 @@ export interface DetectedCapabilities {
   readonly executorDetail: ExecutorCapability | null;
 }
 
-export type CapabilityStatus = 'available' | 'unavailable' | 'unknown' | 'disabled';
+export { type CapabilityStatus };
 
 // ─── Initial state ─────────────────────────────────────────────────────────
 
@@ -63,8 +95,57 @@ export function createInitialState(
     workspaceConfirmed: wsState?.confirmationStatus === 'confirmed',
     taskSession: null,
     capabilities: createInitialCapabilities(),
+    reviewState: null,
+    handoffState: null,
+    providerState: createInitialProviderState(),
     errorMessage: null,
     version: '0.0.1',
+  };
+}
+
+export function createInitialProviderState(): ProviderSelectionState {
+  return {
+    activeProviderId: 'gemini',
+    activeMode: 'browser',
+    activeModelId: 'gemini-1.5-pro',
+    providers: [
+      {
+        id: 'openai',
+        name: 'OpenAI ChatGPT',
+        supportedModes: ['browser', 'api', 'manual'],
+        status: 'not-configured',
+        hasCredential: false,
+        selectedModelId: 'gpt-4o',
+        availableModels: ['gpt-4o', 'gpt-4o-mini', 'o1', 'o3-mini'],
+      },
+      {
+        id: 'gemini',
+        name: 'Google Gemini',
+        supportedModes: ['browser', 'api', 'manual'],
+        status: 'not-configured',
+        hasCredential: false,
+        selectedModelId: 'gemini-1.5-pro',
+        availableModels: ['gemini-1.5-pro', 'gemini-1.5-flash', 'gemini-2.0-flash'],
+      },
+      {
+        id: 'claude',
+        name: 'Anthropic Claude',
+        supportedModes: ['api', 'manual', 'browser'],
+        status: 'not-configured',
+        hasCredential: false,
+        selectedModelId: 'claude-3-5-sonnet-20241022',
+        availableModels: ['claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022', 'claude-3-opus-20240229'],
+      },
+      {
+        id: 'deepseek',
+        name: 'DeepSeek',
+        supportedModes: ['api', 'manual', 'browser'],
+        status: 'not-configured',
+        hasCredential: false,
+        selectedModelId: 'deepseek-chat',
+        availableModels: ['deepseek-chat', 'deepseek-reasoner'],
+      },
+    ],
   };
 }
 
@@ -152,6 +233,16 @@ export function withWorkspaceState(
   };
 }
 
+export function withReviewState(
+  state: MediatorLocalState,
+  reviewState: ReviewPanelState | null,
+): MediatorLocalState {
+  return {
+    ...state,
+    reviewState,
+  };
+}
+
 export function withNewTaskSession(
   state: MediatorLocalState,
   taskId: string,
@@ -180,6 +271,16 @@ export function withTaskTransition(
     return { ...state, errorMessage: result.error.message };
   }
   return { ...state, taskSession: result.value };
+}
+
+export function withHandoffState(
+  state: MediatorLocalState,
+  handoffState: HandoffPanelState | null,
+): MediatorLocalState {
+  return {
+    ...state,
+    handoffState,
+  };
 }
 
 // ─── Display helpers ───────────────────────────────────────────────────────
@@ -239,10 +340,21 @@ function formatTaskState(state: TaskStateValue): string {
 
 export function formatCapabilityStatus(status: CapabilityStatus): string {
   switch (status) {
-    case 'available': return '✓ Available';
-    case 'unavailable': return '✗ Unavailable';
-    case 'unknown': return '? Unknown';
-    case 'disabled': return '— Disabled (Review-only mode)';
+    case 'available':
+    case 'supported':
+      return '✓ Available';
+    case 'unavailable':
+      return '✗ Unavailable';
+    case 'permission_denied':
+      return '⚠ Permission Denied';
+    case 'not_yet_verified':
+      return '? Not Yet Verified';
+    case 'unknown':
+      return '? Unknown';
+    case 'disabled':
+      return '— Disabled (Review-only mode)';
+    default:
+      return '? Unknown';
   }
 }
 

@@ -95,7 +95,17 @@ const UNCONFIRMED_WORKSPACE: WorkspaceRootState = {
   confirmationStatus: 'pending',
 };
 
-// ─── Helper ────────────────────────────────────────────────────────────────
+function assertOk<T>(res: { ok: true; value: T } | { ok: false; error: any }): T {
+  expect(res.ok).toBe(true);
+  if (!res.ok) throw new Error(res.error?.message ?? 'Expected ok');
+  return res.value;
+}
+
+function assertErr<T>(res: { ok: true; value: T } | { ok: false; error: any }): any {
+  expect(res.ok).toBe(false);
+  if (res.ok) throw new Error('Expected err');
+  return res.error;
+}
 
 function makeCandidateFile(relativePath: string, content: string): CandidateFile {
   return {
@@ -326,75 +336,67 @@ describe('S06 — Secret Scanner', () => {
   describe('5. Private-key and token-like content detection', () => {
     it('detects RSA private key header', () => {
       const content = `${FAKE_SECRETS.privateKeyHeader}\nMIIEpAIBAAKCAQEA...fake base64...\n-----END RSA PRIVATE KEY-----`;
-      const result = scanContent(content);
-      expect(result.ok).toBe(true);
-      expect(result.value.secretsDetected).toBe(true);
-      const ruleIds = result.value.findings.map(f => f.ruleId);
+      const result = assertOk(scanContent(content));
+      expect(result.secretsDetected).toBe(true);
+      const ruleIds = result.findings.map((f: { ruleId: string }) => f.ruleId);
       expect(ruleIds).toContain('PRIVATE_KEY_BLOCK');
       // Findings must never contain the raw secret value
-      const serialized = JSON.stringify(result.value.findings);
+      const serialized = JSON.stringify(result.findings);
       assertNoSecretsInOutput(serialized, ['privateKeyHeader']);
     });
 
     it('detects Stripe test key', () => {
       const content = `STRIPE_SECRET_KEY=${FAKE_SECRETS.stripeKey}`;
-      const result = scanContent(content);
-      expect(result.ok).toBe(true);
-      expect(result.value.secretsDetected).toBe(true);
-      const serialized = JSON.stringify(result.value.findings);
+      const result = assertOk(scanContent(content));
+      expect(result.secretsDetected).toBe(true);
+      const serialized = JSON.stringify(result.findings);
       assertNoSecretsInOutput(serialized, ['stripeKey']);
     });
 
     it('detects GitHub token', () => {
       const content = `Authorization: token ${FAKE_SECRETS.githubToken}`;
-      const result = scanContent(content);
-      expect(result.ok).toBe(true);
-      expect(result.value.secretsDetected).toBe(true);
+      const result = assertOk(scanContent(content));
+      expect(result.secretsDetected).toBe(true);
     });
 
     it('detects JWT token', () => {
       const content = `token=${FAKE_SECRETS.jwtToken}`;
-      const result = scanContent(content);
-      expect(result.ok).toBe(true);
-      expect(result.value.secretsDetected).toBe(true);
-      const ruleIds = result.value.findings.map(f => f.ruleId);
+      const result = assertOk(scanContent(content));
+      expect(result.secretsDetected).toBe(true);
+      const ruleIds = result.findings.map((f: { ruleId: string }) => f.ruleId);
       expect(ruleIds).toContain('JWT_TOKEN');
     });
 
     it('detects OpenAI key', () => {
       const content = `OPENAI_API_KEY=${FAKE_SECRETS.openaiKey}`;
-      const result = scanContent(content);
-      expect(result.ok).toBe(true);
-      expect(result.value.secretsDetected).toBe(true);
+      const result = assertOk(scanContent(content));
+      expect(result.secretsDetected).toBe(true);
     });
   });
 
   describe('6. Authorization headers and database connection strings', () => {
     it('detects Bearer authorization header', () => {
       const content = `Authorization: ${FAKE_SECRETS.bearerToken}`;
-      const result = scanContent(content);
-      expect(result.ok).toBe(true);
-      expect(result.value.secretsDetected).toBe(true);
-      const ruleIds = result.value.findings.map(f => f.ruleId);
+      const result = assertOk(scanContent(content));
+      expect(result.secretsDetected).toBe(true);
+      const ruleIds = result.findings.map((f: { ruleId: string }) => f.ruleId);
       expect(ruleIds).toContain('AUTH_BEARER_TOKEN');
-      assertNoSecretsInOutput(JSON.stringify(result.value.findings), ['bearerToken']);
+      assertNoSecretsInOutput(JSON.stringify(result.findings), ['bearerToken']);
     });
 
     it('detects database URL with credentials', () => {
       const content = `DATABASE_URL=${FAKE_SECRETS.dbUrl}`;
-      const result = scanContent(content);
-      expect(result.ok).toBe(true);
-      expect(result.value.secretsDetected).toBe(true);
-      const ruleIds = result.value.findings.map(f => f.ruleId);
+      const result = assertOk(scanContent(content));
+      expect(result.secretsDetected).toBe(true);
+      const ruleIds = result.findings.map((f: { ruleId: string }) => f.ruleId);
       expect(ruleIds).toContain('DATABASE_URL_WITH_CREDENTIALS');
-      assertNoSecretsInOutput(JSON.stringify(result.value.findings), ['dbUrl']);
+      assertNoSecretsInOutput(JSON.stringify(result.findings), ['dbUrl']);
     });
 
     it('detects client_secret assignment', () => {
       const content = `${FAKE_SECRETS.clientSecret}`;
-      const result = scanContent(content);
-      expect(result.ok).toBe(true);
-      expect(result.value.secretsDetected).toBe(true);
+      const result = assertOk(scanContent(content));
+      expect(result.secretsDetected).toBe(true);
     });
   });
 
@@ -405,13 +407,12 @@ describe('S06 — Secret Scanner', () => {
 STRIPE_SECRET_KEY=${FAKE_SECRETS.stripeKey}
 SECRET=some-other-secret-value-here-1234567890
 `;
-      const result = scanContent(content);
-      expect(result.ok).toBe(true);
-      const serialized = JSON.stringify(result.value);
+      const result = assertOk(scanContent(content));
+      const serialized = JSON.stringify(result);
       assertNoSecretsInOutput(serialized, ['stripeKey']);
 
       // Verify redaction handles overlaps safely
-      const redacted = redactContent(content, result.value);
+      const redacted = redactContent(content, result);
       expect(redacted.blocked).toBe(false);
       expect(redacted.wasRedacted).toBe(true);
       assertNoSecretsInOutput(redacted.redactedContent, ['stripeKey']);
@@ -421,28 +422,24 @@ SECRET=some-other-secret-value-here-1234567890
   describe('8. Large content and unsupported encoding', () => {
     it('fails closed for content exceeding max size', () => {
       const huge = 'A'.repeat(600 * 1024); // 600 KB > 512 KB limit
-      const result = scanContent(huge);
-      expect(result.ok).toBe(false);
-      expect(result.error.code).toBe('OVERSIZED_INPUT');
+      const err = assertErr(scanContent(huge));
+      expect(err.code).toBe('OVERSIZED_INPUT');
     });
 
     it('fails closed for content with lone surrogates', () => {
       const badContent = 'valid text\uD800invalid surrogate\n'; // Lone high surrogate
-      const result = scanContent(badContent);
-      expect(result.ok).toBe(false);
-      expect(result.error.code).toBe('SCHEMA_INVALID');
+      const err = assertErr(scanContent(badContent));
+      expect(err.code).toBe('SCHEMA_INVALID');
     });
 
     it('handles empty string safely', () => {
-      const result = scanContent('');
-      expect(result.ok).toBe(true);
-      expect(result.value.secretsDetected).toBe(false);
+      const result = assertOk(scanContent(''));
+      expect(result.secretsDetected).toBe(false);
     });
 
     it('handles normal text safely', () => {
-      const result = scanContent('This is clean safe code content without any secrets.');
-      expect(result.ok).toBe(true);
-      expect(result.value.secretsDetected).toBe(false);
+      const result = assertOk(scanContent('This is clean safe code content without any secrets.'));
+      expect(result.secretsDetected).toBe(false);
     });
   });
 
@@ -453,16 +450,14 @@ SECRET=some-other-secret-value-here-1234567890
 [DEBUG] Stripe key: ${FAKE_SECRETS.stripeKey}
 [INFO] Done
 `;
-      const result = scanTerminalOutput(output);
-      expect(result.ok).toBe(true);
-      expect(result.value.secretsDetected).toBe(true);
+      const result = assertOk(scanTerminalOutput(output));
+      expect(result.secretsDetected).toBe(true);
     });
 
     it('redactTerminalOutput replaces secrets in terminal output', () => {
       const output = `Authorization: ${FAKE_SECRETS.bearerToken}`;
-      const scanResult = scanContent(output);
-      expect(scanResult.ok).toBe(true);
-      const safe = redactTerminalOutput(output, scanResult.value);
+      const scanResult = assertOk(scanContent(output));
+      const safe = redactTerminalOutput(output, scanResult);
       assertNoSecretsInOutput(safe, ['bearerToken']);
       expect(safe).toContain('[REDACTED:AUTH_TOKEN]');
     });
@@ -479,9 +474,8 @@ describe('S06 — Redactor', () => {
   describe('10. Redacted values never appear in serialized downstream packets', () => {
     it('redacts Stripe key and verifies it is absent from serialized output', () => {
       const content = `API_KEY=${FAKE_SECRETS.stripeKey}\nother data`;
-      const scan = scanContent(content);
-      expect(scan.ok).toBe(true);
-      const redacted = redactContent(content, scan.value);
+      const scan = assertOk(scanContent(content));
+      const redacted = redactContent(content, scan);
 
       // Serialize the entire redaction result
       const serialized = JSON.stringify(redacted);
@@ -492,9 +486,8 @@ describe('S06 — Redactor', () => {
 
     it('redacts bearer token and verifies complete absence from packet', () => {
       const content = `Authorization: ${FAKE_SECRETS.bearerToken}`;
-      const scan = scanContent(content);
-      expect(scan.ok).toBe(true);
-      const redacted = redactContent(content, scan.value);
+      const scan = assertOk(scanContent(content));
+      const redacted = redactContent(content, scan);
 
       const serialized = JSON.stringify(redacted);
       assertNoSecretsInOutput(serialized, ['bearerToken']);
@@ -503,9 +496,8 @@ describe('S06 — Redactor', () => {
 
     it('checkNoSecretsLeaked confirms fixture secrets absent from redacted output', () => {
       const content = `PASSWORD=${FAKE_SECRETS.password}`;
-      const scan = scanContent(content);
-      expect(scan.ok).toBe(true);
-      const redacted = redactContent(content, scan.value);
+      const scan = assertOk(scanContent(content));
+      const redacted = redactContent(content, scan);
 
       if (!redacted.blocked) {
         const leaked = checkNoSecretsLeaked(redacted.redactedContent, [FAKE_SECRETS.password]);
@@ -515,9 +507,8 @@ describe('S06 — Redactor', () => {
 
     it('records are safe — no raw secret in redaction records', () => {
       const content = `${FAKE_SECRETS.clientSecret}`;
-      const scan = scanContent(content);
-      expect(scan.ok).toBe(true);
-      const redacted = redactContent(content, scan.value);
+      const scan = assertOk(scanContent(content));
+      const redacted = redactContent(content, scan);
 
       // Every redaction record must be safe
       for (const record of redacted.redactions) {
@@ -553,9 +544,8 @@ describe('S06 — Redactor', () => {
     });
 
     it('shouldBlockContent returns true for critical/high findings', () => {
-      const scan = scanContent(`STRIPE_SECRET=${FAKE_SECRETS.stripeKey}`);
-      expect(scan.ok).toBe(true);
-      expect(shouldBlockContent(scan.value)).toBe(true);
+      const scan = assertOk(scanContent(`STRIPE_SECRET=${FAKE_SECRETS.stripeKey}`));
+      expect(shouldBlockContent(scan)).toBe(true);
     });
 
     it('shouldBlockContent returns true for truncated scans', () => {
@@ -631,11 +621,9 @@ describe('S06 — Context Filter (Full Pipeline)', () => {
         makeCandidateFile('src/index.ts', 'export const VERSION = "1.0.0";'),
       ];
 
-      const result = buildSafeContextPacket(CONFIRMED_WORKSPACE, candidates);
-      expect(result.ok).toBe(true);
+      const packet = assertOk(buildSafeContextPacket(CONFIRMED_WORKSPACE, candidates));
 
-      const packet = result.value;
-      const envItem = packet.items.find(i => i.relativePath === '.env');
+      const envItem = packet.items.find((i: { relativePath: string }) => i.relativePath === '.env');
       expect(envItem?.status).toBe('excluded');
 
       // Verify the Stripe key never appears in the entire serialized packet
@@ -656,9 +644,8 @@ describe('S06 — Context Filter (Full Pipeline)', () => {
 
   describe('buildSafeContextPacket — workspace validation', () => {
     it('requires confirmed workspace root', () => {
-      const result = buildSafeContextPacket(UNCONFIRMED_WORKSPACE, []);
-      expect(result.ok).toBe(false);
-      expect(result.error.code).toBe('WORKSPACE_CONFIRMATION_REQUIRED');
+      const err = assertErr(buildSafeContextPacket(UNCONFIRMED_WORKSPACE, []));
+      expect(err.code).toBe('WORKSPACE_CONFIRMATION_REQUIRED');
     });
 
     it('succeeds with confirmed workspace and clean files', () => {
@@ -666,10 +653,9 @@ describe('S06 — Context Filter (Full Pipeline)', () => {
         makeCandidateFile('src/index.ts', 'export const x = 1;'),
         makeCandidateFile('README.md', '# Project\nThis is a test project.'),
       ];
-      const result = buildSafeContextPacket(CONFIRMED_WORKSPACE, candidates);
-      expect(result.ok).toBe(true);
-      expect(result.value.safeToSend).toBe(true);
-      expect(result.value.summary.included).toBe(2);
+      const packet = assertOk(buildSafeContextPacket(CONFIRMED_WORKSPACE, candidates));
+      expect(packet.safeToSend).toBe(true);
+      expect(packet.summary.included).toBe(2);
     });
 
     it('packet is not safe to send when blocked items exist', () => {
@@ -677,11 +663,10 @@ describe('S06 — Context Filter (Full Pipeline)', () => {
         makeCandidateFile('src/safe.ts', 'export const clean = true;'),
         makeCandidateFile('.env', `KEY=${FAKE_SECRETS.stripeKey}`), // Will be excluded
       ];
-      const result = buildSafeContextPacket(CONFIRMED_WORKSPACE, candidates);
-      expect(result.ok).toBe(true);
+      const packet = assertOk(buildSafeContextPacket(CONFIRMED_WORKSPACE, candidates));
       // Excluded items don't make the packet unsafe — only blocked/scan_error items do
       // .env is excluded (not blocked), so safeToSend should still be true
-      expect(result.value.summary.excluded).toBeGreaterThan(0);
+      expect(packet.summary.excluded).toBeGreaterThan(0);
     });
   });
 
@@ -698,10 +683,8 @@ describe('S06 — Context Filter (Full Pipeline)', () => {
         makeCandidateFile('.aws/credentials', `[default]\naws_secret_access_key = ${FAKE_SECRETS.awsSecret}`),
       ];
 
-      const result = buildSafeContextPacket(CONFIRMED_WORKSPACE, candidates);
-      expect(result.ok).toBe(true);
+      const packet = assertOk(buildSafeContextPacket(CONFIRMED_WORKSPACE, candidates));
 
-      const packet = result.value;
       // Serialize the ENTIRE packet
       const serialized = JSON.stringify(packet);
 
@@ -720,10 +703,10 @@ describe('S06 — Context Filter (Full Pipeline)', () => {
       ]);
 
       // Verify expected dispositions
-      const envItem = packet.items.find(i => i.relativePath === '.env');
-      const awsItem = packet.items.find(i => i.relativePath === '.aws/credentials');
-      const configItem = packet.items.find(i => i.relativePath === 'config.ts');
-      const cleanItem = packet.items.find(i => i.relativePath === 'src/utils.ts');
+      const envItem = packet.items.find((i: { relativePath: string }) => i.relativePath === '.env');
+      const awsItem = packet.items.find((i: { relativePath: string }) => i.relativePath === '.aws/credentials');
+      const configItem = packet.items.find((i: { relativePath: string }) => i.relativePath === 'config.ts');
+      const cleanItem = packet.items.find((i: { relativePath: string }) => i.relativePath === 'src/utils.ts');
 
       expect(envItem?.status).toBe('excluded');
       expect(awsItem?.status).toBe('excluded');
@@ -782,10 +765,9 @@ describe('S06 — Custom Pattern Registration', () => {
       pattern: /INTTOK_[A-Z0-9]{16}/,
       redactionLabel: '[REDACTED:INTERNAL_TOKEN]',
     });
-    const result = scanContent('Authorization: INTTOK_ABCDEF1234567890');
-    expect(result.ok).toBe(true);
-    expect(result.value.secretsDetected).toBe(true);
-    const ruleIds = result.value.findings.map(f => f.ruleId);
+    const scan = assertOk(scanContent('Authorization: INTTOK_ABCDEF1234567890'));
+    expect(scan.secretsDetected).toBe(true);
+    const ruleIds = scan.findings.map((f: { ruleId: string }) => f.ruleId);
     expect(ruleIds).toContain('INTERNAL_TOKEN');
   });
 });

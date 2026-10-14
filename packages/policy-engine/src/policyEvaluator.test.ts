@@ -352,7 +352,9 @@ describe('S07 — Approval Management & Actor Separation', () => {
       caller: { type: 'agent', isTrustedUI: false },
     });
     expect(agentRes.success).toBe(false);
-    expect(agentRes.reasonCode).toBe('CALLER_UNAUTHORIZED_FOR_APPROVAL');
+    if (!agentRes.success) {
+      expect(agentRes.reasonCode).toBe('CALLER_UNAUTHORIZED_FOR_APPROVAL');
+    }
 
     // Attempting resolution by MCP caller
     const mcpRes = store.resolve({
@@ -361,7 +363,9 @@ describe('S07 — Approval Management & Actor Separation', () => {
       caller: { type: 'mcp', isTrustedUI: false },
     });
     expect(mcpRes.success).toBe(false);
-    expect(mcpRes.reasonCode).toBe('CALLER_UNAUTHORIZED_FOR_APPROVAL');
+    if (!mcpRes.success) {
+      expect(mcpRes.reasonCode).toBe('CALLER_UNAUTHORIZED_FOR_APPROVAL');
+    }
   });
 
   it('11. only trusted approval UI flow can resolve pending approvals', () => {
@@ -401,7 +405,9 @@ describe('S07 — Approval Management & Actor Separation', () => {
       caller: { type: 'ide', isTrustedUI: true },
     });
     expect(resolveExpired.success).toBe(false);
-    expect(resolveExpired.reasonCode).toBe('APPROVAL_EXPIRED');
+    if (!resolveExpired.success) {
+      expect(resolveExpired.reasonCode).toBe('APPROVAL_EXPIRED');
+    }
 
     // Single-use: once consumed, duplicate use fails
     const validReq = store.createRequest({
@@ -423,7 +429,9 @@ describe('S07 — Approval Management & Actor Separation', () => {
 
     const secondConsume = store.consume(validReq.approvalId, 'task-100', 'apply_staged_changes', 'hash-abc');
     expect(secondConsume.success).toBe(false);
-    expect(secondConsume.reasonCode).toBe('APPROVAL_ALREADY_RESOLVED');
+    if (!secondConsume.success) {
+      expect(secondConsume.reasonCode).toBe('APPROVAL_ALREADY_RESOLVED');
+    }
 
     // Mismatched task ID
     const mismatchedReq = store.createRequest({
@@ -441,7 +449,9 @@ describe('S07 — Approval Management & Actor Separation', () => {
     });
     const mismatchConsume = store.consume(mismatchedReq.approvalId, 'task-WRONG', 'apply_staged_changes', 'hash-abc');
     expect(mismatchConsume.success).toBe(false);
-    expect(mismatchConsume.reasonCode).toBe('APPROVAL_PAYLOAD_MISMATCH');
+    if (!mismatchConsume.success) {
+      expect(mismatchConsume.reasonCode).toBe('APPROVAL_PAYLOAD_MISMATCH');
+    }
   });
 });
 

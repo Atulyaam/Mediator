@@ -5,10 +5,17 @@
   "type": "module",
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "clean": "rimraf dist *.tsbuildinfo"
   },
+  "dependencies": {
+    "@mediator/shared-contracts": "*",
+    "@mediator/protocol": "*"
+  },
   "devDependencies": {
-    "typescript": "*"
+    "@types/node": "^22.5.0",
+    "typescript": "*",
+    "vitest": "*"
   }
 }

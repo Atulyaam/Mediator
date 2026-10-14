@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   TaskState,
+  type TaskStateValue,
   validateTransition,
   applyTransition,
   createTaskSession,

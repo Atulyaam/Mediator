@@ -1,0 +1,29 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "tsBuildInfoFile": "./dist/.tsbuildinfo",
+    "baseUrl": ".",
+    "paths": {
+      "@mediator/shared-contracts": ["../../packages/shared-contracts/dist/index.d.ts"],
+      "@mediator/workspace-boundary": ["../../packages/workspace-boundary/dist/index.d.ts"],
+      "@mediator/context-security": ["../../packages/context-security/dist/index.d.ts"],
+      "@mediator/policy-engine": ["../../packages/policy-engine/dist/index.d.ts"],
+      "@mediator/stage-store": ["../../packages/stage-store/dist/index.d.ts"],
+      "@mediator/recipe-registry": ["../../packages/recipe-registry/dist/index.d.ts"],
+      "@mediator/protocol": ["../../packages/protocol/dist/index.d.ts"]
+    }
+  },
+  "references": [
+    { "path": "../../packages/shared-contracts" },
+    { "path": "../../packages/workspace-boundary" },
+    { "path": "../../packages/context-security" },
+    { "path": "../../packages/policy-engine" },
+    { "path": "../../packages/stage-store" },
+    { "path": "../../packages/recipe-registry" },
+    { "path": "../../packages/protocol" }
+  ],
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "src/**/*.test.ts"]
+}

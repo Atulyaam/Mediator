@@ -32,6 +32,16 @@
         "command": "mediator.showCapabilities",
         "title": "Mediator: Show Capabilities",
         "category": "Mediator"
+      },
+      {
+        "command": "mediator.prepareHandoff",
+        "title": "Mediator: Prepare IDE Agent Handoff",
+        "category": "Mediator"
+      },
+      {
+        "command": "mediator.openStandaloneUi",
+        "title": "Mediator: Open Standalone UI",
+        "category": "Mediator"
       }
     ],
     "menus": {
@@ -39,7 +49,9 @@
         { "command": "mediator.start" },
         { "command": "mediator.stop" },
         { "command": "mediator.showPanel" },
-        { "command": "mediator.showCapabilities" }
+        { "command": "mediator.showCapabilities" },
+        { "command": "mediator.prepareHandoff" },
+        { "command": "mediator.openStandaloneUi" }
       ]
     }
   },
@@ -56,6 +68,8 @@
   "dependencies": {
     "@mediator/shared-contracts": "*",
     "@mediator/task-domain": "*",
-    "@mediator/workspace-boundary": "*"
+    "@mediator/workspace-boundary": "*",
+    "@mediator/policy-engine": "*",
+    "@mediator/stage-store": "*"
   }
 }

@@ -1,0 +1,25 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "tsBuildInfoFile": "./dist/.tsbuildinfo",
+    "baseUrl": ".",
+    "paths": {
+      "@mediator/shared-contracts": ["../../packages/shared-contracts/dist/index.d.ts"],
+      "@mediator/workspace-boundary": ["../../packages/workspace-boundary/dist/index.d.ts"],
+      "@mediator/context-security": ["../../packages/context-security/dist/index.d.ts"],
+      "@mediator/ide-adapter-antigravity": ["../../packages/ide-adapter-antigravity/dist/index.d.ts"],
+      "@mediator/context-engine": ["../../packages/context-engine/dist/index.d.ts"]
+    }
+  },
+  "references": [
+    { "path": "../../packages/shared-contracts" },
+    { "path": "../../packages/workspace-boundary" },
+    { "path": "../../packages/context-security" },
+    { "path": "../../packages/ide-adapter-antigravity" },
+    { "path": "../../packages/context-engine" }
+  ],
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "src/**/*.test.ts"]
+}

@@ -52,6 +52,13 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('mediator.showCapabilities', () =>
       cmdShowCapabilities(),
     ),
+    vscode.commands.registerCommand('mediator.prepareHandoff', () =>
+      cmdPrepareHandoff(context),
+    ),
+    vscode.commands.registerCommand('mediator.openStandaloneUi', () => {
+      const uri = vscode.Uri.parse('http://127.0.0.1:41234');
+      void vscode.env.openExternal(uri);
+    }),
   );
 
   // Watch for workspace root changes
@@ -182,6 +189,13 @@ function cmdShowCapabilities(): void {
   ];
 
   void vscode.window.showInformationMessage(lines.join('\n'));
+}
+
+function cmdPrepareHandoff(context: vscode.ExtensionContext): void {
+  MediatorPanel.createOrShow(_state, context.extensionUri);
+  void vscode.window.showInformationMessage(
+    'Mediator: Prepare IDE Agent Handoff opened. Review instructions and copy prompt manually to your IDE agent.',
+  );
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
