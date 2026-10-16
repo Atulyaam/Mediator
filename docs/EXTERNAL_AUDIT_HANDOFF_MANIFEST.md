@@ -1,14 +1,14 @@
 # External Independent Security Audit — Artifact & Documentation Manifest
 
-**Release Candidate Target:** Mediator `v0.1.0-beta.1.post1` (Immutable Audit Snapshot)  
-**Baseline Revision:** Commit `c55177400bd399adf05578ad80f8268f1173e371` (`v0.1.0-beta.1` frozen baseline)  
-**Candidate Git Commit SHA:** `228e974fc11ee0f1ce71939d4d3e038c82918a21`  
-**Candidate Annotated Tag:** `v0.1.0-beta.1.post1`  
-**Package Scope:** Chromium Native Messaging Host (`mediator-native-host.exe`), IPC Framing, Trust Boundaries, Sandboxing, and Monorepo Source  
-**Audit Evaluation Posture:** `PENDING_EXTERNAL_REVIEW`  
-**Public Release Status:** `STRICTLY BLOCKED PENDING INDEPENDENT AUDIT SIGN-OFF`  
-**Security Policy Invariant:** S00 `NO-GO-AUTOEXEC` — Local Autopilot strictly **`BLOCKED`** fail-closed  
-**Manifest Generation Timestamp:** 2026-10-14T09:48:00+05:30  
+- **Release Candidate Target:** Mediator `v0.1.0-beta.1.post1` (Immutable Audit Snapshot)
+- **Baseline Revision:** Commit `c55177400bd399adf05578ad80f8268f1173e371` (`v0.1.0-beta.1` frozen baseline)
+- **Candidate Git Commit SHA:** `228e974fc11ee0f1ce71939d4d3e038c82918a21`
+- **Candidate Annotated Tag:** `v0.1.0-beta.1.post1`
+- **Package Scope:** Chromium Native Messaging Host (`mediator-native-host.exe`), IPC Framing, Trust Boundaries, Sandboxing, and Monorepo Source
+- **Audit Evaluation Posture:** `PENDING_EXTERNAL_REVIEW`
+- **Public Release Status:** `STRICTLY BLOCKED PENDING INDEPENDENT AUDIT SIGN-OFF`
+- **Security Policy Invariant:** S00 `NO-GO-AUTOEXEC` — Local Autopilot strictly **`BLOCKED`** fail-closed
+- **Manifest Generation Timestamp:** 2026-10-14T09:48:00+05:30
 
 ---
 

@@ -160,7 +160,11 @@ export class IdeApiClient {
   }
 
   public async getStatus(): Promise<CoreStatusPayload> {
-    return this.request<CoreStatusPayload>('/api/status');
+    const res = await this.request<CoreStatusPayload>('/api/status');
+    if (res.pairingToken && !this.token) {
+      this.token = res.pairingToken;
+    }
+    return res;
   }
 
   public async getWorkspace(): Promise<{ ok: boolean; workspaceRoot: string | null; confirmed: boolean }> {
@@ -228,6 +232,17 @@ export class IdeApiClient {
     return this.request(`/api/tasks/${encodeURIComponent(taskId)}/message`, {
       method: 'POST',
       body: JSON.stringify({ message }),
+    });
+  }
+
+  public async executeContextCommand(
+    taskId: string,
+    command: string,
+    args: Record<string, unknown> = {},
+  ): Promise<{ ok: boolean; result?: unknown; error?: string }> {
+    return this.request(`/api/tasks/${encodeURIComponent(taskId)}/command`, {
+      method: 'POST',
+      body: JSON.stringify({ command, args }),
     });
   }
 
