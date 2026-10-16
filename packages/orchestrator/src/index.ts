@@ -18,3 +18,5 @@ export * from './mediatorCore.js';
 export * from './mediatorHttpServer.js';
 export * from './hostContainment/index.js';
 export * from './doctorDiagnosticsService.js';
+export * from './guardedAutopilotEngine.js';
+export * from './webConversationManager.js';

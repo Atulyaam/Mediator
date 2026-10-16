@@ -11,9 +11,10 @@
 ## 1. Candidate Intake & Integrity Verification
 
 - [ ] **1.1 Source Repository & Commit Identification**
-  - Verify baseline commit SHA matches `c55177400bd399adf05578ad80f8268f1173e371`.
-  - Distinguish **Candidate A** (frozen baseline) from **Candidate B** (working tree with Windows NTFS EPERM fix and test suite).
-  - Confirm Candidate B is selected for review to inspect complete audit handoff documentation and tests.
+  - Verify baseline commit SHA matches `c55177400bd399adf05578ad80f8268f1173e371` (`v0.1.0-beta.1`).
+  - Distinguish **Candidate A** (frozen baseline `c551774...`) from **Candidate B** (immutable audit snapshot `228e974fc11ee0f1ce71939d4d3e038c82918a21`).
+  - Confirm Candidate B has dedicated branch `audit/v0.1.0-beta.1.post1` and annotated tag `v0.1.0-beta.1.post1`.
+  - Confirm Candidate B is selected for review to inspect complete audit handoff documentation, tests, and portable archive.
 
 - [ ] **1.2 Native Host Binary Cryptographic Checksum**
   - Check file: `packages/native-host/dist/mediator-native-host.exe`
@@ -21,9 +22,10 @@
   - Confirm hash matches: `87FCB9871267E210E80D85CD4241511924227D12913B200EC81098C7D0BCB584`.
   - Confirm file size matches: `90,250,240 bytes`.
 
-- [ ] **1.3 Audit Package Manifest Verification**
+- [ ] **1.3 Audit Package Manifest & Archive Verification**
   - Check files in `docs/security-audit-package/` against [`docs/EXTERNAL_AUDIT_HANDOFF_MANIFEST.md`](file:///c:/Users/Atul2/OneDrive/Desktop/Mediator/docs/EXTERNAL_AUDIT_HANDOFF_MANIFEST.md).
   - Verify all 8 files match their documented SHA-256 fingerprints.
+  - Verify portable audit archive `mediator-audit-candidate-v0.1.0-beta.1.post1.zip` matches checksum file `mediator-audit-candidate-v0.1.0-beta.1.post1.zip.sha256`.
 
 ---
 

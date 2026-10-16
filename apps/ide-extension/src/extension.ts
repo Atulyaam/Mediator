@@ -21,6 +21,7 @@ import {
 } from './mediatorState.js';
 import { confirmWorkspaceRoot, selectFromIdeFolders } from '@mediator/workspace-boundary';
 import { MediatorPanel } from './panel.js';
+import { IdeApiClient } from './apiClient.js';
 
 // ─── Extension state (local only) ─────────────────────────────────────────
 
@@ -125,6 +126,9 @@ async function cmdStart(context: vscode.ExtensionContext): Promise<void> {
       return;
     }
     _state = withWorkspace(_state, _state.workspaceRoot, true);
+    if (_state.workspaceRoot) {
+      void new IdeApiClient().setWorkspace(_state.workspaceRoot, true).catch(() => {});
+    }
   }
 
   // Transition: stopped → starting

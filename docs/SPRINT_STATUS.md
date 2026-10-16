@@ -2,10 +2,10 @@
 
 - **Master spec:** Mediator_Final_Development_Plan_v1.3.md
 - **Sprint plan:** S33–S48 Unified Autonomous Coding Platform, Offline Toolchain, End-to-End Workflow & UX
-- **Current sprint:** S53 — Release Candidate Integrity & Independent Security Audit Handoff (v0.1.0-beta.1 Provenance Verified & Audit-Ready)
-- **Release Qualification Result:** **`PASS (RELEASE CANDIDATE INTEGRITY VERIFIED; CANDIDATE B AUDIT-READY; AUDIT HANDOFF PACKAGE ASSEMBLED; AUDIT STATUS PENDING_EXTERNAL_REVIEW)`** (Local Autopilot **`BLOCKED`** fail-closed under S00 NO-GO-AUTOEXEC; Monorepo Quality Gates **`PASS (57/57 test files, 1,074/1,074 tests passing, 100%, 0 lint errors, 0 typecheck errors)`**; Preflight Doctor **`HEALTHY (11/11 READY)`**; Native Host Binary Cryptographic SHA-256 **`87FCB987...`** Verified; Node.js SEA Packager & 90.25 MB Footprint Reconciled; Stage Storage Decoupling Established; Handoff Manifest **`docs/EXTERNAL_AUDIT_HANDOFF_MANIFEST.md`** & Checklist **`docs/EXTERNAL_AUDIT_HANDOFF_CHECKLIST.md`** Assembled; External Security Audit Status **`PENDING_EXTERNAL_REVIEW`**; Public Distribution **`STRICTLY BLOCKED PENDING INDEPENDENT AUDIT SIGN-OFF`**)
-- **Status Summary:** S53: PASS, S52: PASS, S51: PASS, Controlled Beta: PASS, S50: PASS, S49: PASS, S48: PASS, S47: PASS, S46: PASS, S45: PASS, S44: PASS, S43: PASS, S42: CONDITIONAL, S41: CONDITIONAL, S40: CONDITIONAL, S39: PASS, S38: CONDITIONAL, S37: CONDITIONAL, S36: CONDITIONAL, S35: PASS, S34: PASS, S33: PASS, S32: PASS, S31: PASS, S30: PASS, S29: PASS, S28: PASS, S27: PASS, S26: DEFERRED (Outcome B — Autopilot Disabled under NO-GO-AUTOEXEC), S25: PASS
-- **Release Verdict:** Release candidate provenance and cryptographic identity established. Candidate A (Frozen Baseline commit `c55177400bd399adf05578ad80f8268f1173e371`) and Candidate B (Operational Beta Working Tree `v0.1.0-beta.1.post1` with Windows NTFS EPERM fix) formally classified. Release binary `packages/native-host/dist/mediator-native-host.exe` verified bit-for-bit identical across candidates (SHA-256: `87FCB987...`, size: 90,250,240 bytes) and decoupled from stage store. Packaging method reconciled to Node.js Single Executable Application (SEA) via `esbuild` and `postject` on Node v24.13.0. Empirical `npm audit` findings (14 devtooling vulnerabilities) honestly documented without disruptive version overwrites. Complete external audit handoff package, manifest, and verification checklist prepared and sanitized. All 57 test files (1,074 tests) pass 100%. Audit status: `PENDING_EXTERNAL_REVIEW`.
+- **Current sprint:** S53.2 — External Security Audit Engagement Preparation (Candidate B v0.1.0-beta.1.post1 Audit Engagement Ready)
+- **Release Qualification Result:** **`PASS (AUDIT ENGAGEMENT PREPARED; AUDIT REQUEST SPECIFIED; SELECTION CHECKLIST ESTABLISHED; HANDOFF EXECUTION PROTOCOL READY; OUTREACH RFP DRAFTED; CANDIDATE B v0.1.0-beta.1.post1 RE-VERIFIED; AUDIT STATUS PENDING_EXTERNAL_REVIEW)`** (Local Autopilot **`BLOCKED`** fail-closed under S00 NO-GO-AUTOEXEC; Monorepo Quality Gates **`PASS (57/57 test files, 1,074/1,074 tests passing, 100%, 0 lint errors, 0 typecheck errors)`**; Preflight Doctor **`HEALTHY (11/11 READY)`**; Native Host Binary Cryptographic SHA-256 **`87FCB987...`** Verified; Portable Archive `mediator-audit-candidate-v0.1.0-beta.1.post1.zip` SHA-256 **`171C756D...`** Verified; Audit Request **`docs/EXTERNAL_SECURITY_AUDIT_REQUEST.md`** Assembled; Auditor Selection Checklist **`docs/EXTERNAL_AUDITOR_SELECTION_CHECKLIST.md`** Assembled; Handoff Execution Guide **`docs/EXTERNAL_AUDIT_HANDOFF_EXECUTION.md`** Assembled; Outreach RFP **`docs/EXTERNAL_AUDIT_OUTREACH_EMAIL.md`** Drafted; External Security Audit Status **`PENDING_EXTERNAL_REVIEW (ENGAGEMENT-READY)`**; Public Distribution **`STRICTLY BLOCKED PENDING INDEPENDENT AUDIT CLEARANCE`**)
+- **Status Summary:** S53.2: PASS, S53.1: PASS, S53: PASS, S52: PASS, S51: PASS, Controlled Beta: PASS, S50: PASS, S49: PASS, S48: PASS, S47: PASS, S46: PASS, S45: PASS, S44: PASS, S43: PASS, S42: CONDITIONAL, S41: CONDITIONAL, S40: CONDITIONAL, S39: PASS, S38: CONDITIONAL, S37: CONDITIONAL, S36: CONDITIONAL, S35: PASS, S34: PASS, S33: PASS, S32: PASS, S31: PASS, S30: PASS, S29: PASS, S28: PASS, S27: PASS, S26: DEFERRED (Outcome B — Autopilot Disabled under NO-GO-AUTOEXEC), S25: PASS
+- **Release Verdict:** Mediator Candidate B (`v0.1.0-beta.1.post1`) re-verified on immutable commit **`228e974fc11ee0f1ce71939d4d3e038c82918a21`** (tag: `v0.1.0-beta.1.post1`, parent: `c55177400bd399adf05578ad80f8268f1173e371`). Native messaging host binary SHA-256 `87FCB987...` and portable archive SHA-256 `171C756D...` verified with zero discrepancies. Formal third-party security audit engagement package prepared: `docs/EXTERNAL_SECURITY_AUDIT_REQUEST.md` (audit scope, threat model, boundaries, and independent verification mandate), `docs/EXTERNAL_AUDITOR_SELECTION_CHECKLIST.md` (8-domain objective evaluation rubric distinguishing independent security auditors from scanners/QA testers), `docs/EXTERNAL_AUDIT_HANDOFF_EXECUTION.md` (recipient verification commands, package inventory, written authorization-to-test, emergency escalation protocol, and tracking record), and `docs/EXTERNAL_AUDIT_OUTREACH_EMAIL.md` (ready-to-send RFP without fictitious numbers). External security audit status: `PENDING_EXTERNAL_REVIEW (ENGAGEMENT-READY)`. Public distribution remains strictly blocked pending independent audit clearance. S54 deferred.
 - **Providers:**
   1. OpenAI ChatGPT (`openai`) — Mode A (**PASS — LIVE PROVIDER ACCEPTANCE**) & Mode B (Official Chat Completions API)
   2. Google Gemini (`gemini`) — Mode A (**PASS — LIVE PROVIDER ACCEPTANCE**) & Mode B (Official REST generateContent API)
@@ -18,6 +18,45 @@
 - **npm:** 11.6.2
 - **Git:** 2.46.0.windows.1
 - **Execution GO/NO-GO:** NO-GO-AUTOEXEC → **Review-only V1** (ADR-002 through ADR-030)
+
+---
+
+## S53.2 Exit Gate Checklist — External Security Audit Engagement Preparation
+
+| Item | Status | Evidence |
+|---|---|---|
+| **Candidate Identity Re-Verification** | ✅ PASS | Verified commit `228e974...`, branch `audit/v0.1.0-beta.1.post1`, tag `v0.1.0-beta.1.post1`, binary SHA `87FCB9...`, and archive SHA `171C75...` with zero discrepancies. |
+| **Archive Verification Script** | ✅ PASS | Executed `scripts/verify-audit-archive.ps1`: 382 entries, binary present, SBOM present, tests present, manifest present; 0 `.git`, 0 `node_modules`, 0 ad-hoc scripts; exit code 0. |
+| **Formal Audit Request** | ✅ PASS | Created `docs/EXTERNAL_SECURITY_AUDIT_REQUEST.md` detailing architecture, candidate fingerprints, threat models (TM-NMH-01–07), boundaries, disclosed CVEs, and explicit independent verification mandate. |
+| **Auditor Selection Criteria** | ✅ PASS | Created `docs/EXTERNAL_AUDITOR_SELECTION_CHECKLIST.md` establishing 8-domain evaluation rubric, distinguishing independent auditors from automated scanners/QA testers, with conflict-of-interest rules. |
+| **Handoff Execution Guide** | ✅ PASS | Created `docs/EXTERNAL_AUDIT_HANDOFF_EXECUTION.md` covering secure delivery, recipient verification commands, 15-item inventory, authorization-to-test form, emergency escalation, and tracking record. |
+| **Outreach Email Template** | ✅ PASS | Created `docs/EXTERNAL_AUDIT_OUTREACH_EMAIL.md` as ready-to-send RFP soliciting experience, methodology, timeline, pricing, access requirements, and NDA execution without fictitious data. |
+| **Security Governance Invariants** | ✅ PASS | S00 `NO-GO-AUTOEXEC` authoritative; Local Autopilot strictly `BLOCKED` fail-closed; Review-only V1 mode enforced; 14 devtooling vulnerabilities disclosed. |
+| **Audit Disposition & Distribution Barrier** | ✅ PASS | Maintained `PENDING_EXTERNAL_REVIEW (ENGAGEMENT-READY)`. Public distribution strictly blocked pending independent audit sign-off. S54 deferred. |
+| **Authoritative Exit Verdict** | ✅ PASS | **`PASS — AUDIT ENGAGEMENT PREPARATION COMPLETE & READY FOR DISPATCH`**. |
+
+---
+
+---
+
+## S53.1 Exit Gate Checklist — Immutable Audit Snapshot & Reproducible Handoff
+
+| Item | Status | Evidence |
+|---|---|---|
+| **Exhaustive Change Classification** | ✅ PASS | All 297 diff files classified: 149 source, 108 test/doc, 13 audit evidence included; 27 machine-specific ad-hoc scripts excluded; 0 unclear. |
+| **Original State & Baseline Preservation** | ✅ PASS | Baseline commit `c55177400bd399adf05578ad80f8268f1173e371` preserved unaltered; zero resets or force-pushes; isolated worktree at `.worktrees/audit-candidate`. |
+| **Immutable Candidate Identity** | ✅ PASS | Dedicated branch `audit/v0.1.0-beta.1.post1` created; exact Git commit SHA **`228e974fc11ee0f1ce71939d4d3e038c82918a21`** recorded. |
+| **Annotated Tagging** | ✅ PASS | Created annotated tag **`v0.1.0-beta.1.post1`** pointing to commit `228e974...`. Pre-existing tags unmodified. |
+| **Quality Gates on Exact Commit** | ✅ PASS | Executed fresh against commit `228e974...`: `npm ci` (clean), `npm run lint` (0 errors), `npm run typecheck` (0 errors), `npm run build` (0 errors), `node apps/cli/dist/index.js doctor` (11/11 [READY]), `npm test` (**57/57 test files, 1,074/1,074 tests passed, 100% PASS**, 0 failures). |
+| **Native Host Binary Verification** | ✅ PASS | Sizing (90,250,240 bytes) and SHA-256 (`87FCB987...`) independently verified. Decoupling from stage store confirmed. |
+| **Provenance Distinction** | ✅ PASS | Explicitly documented distinction between verified provenance (artifact integrity & test execution) and inferred provenance (Node SEA build non-determinism). Binary bundled directly for auditor examination. |
+| **Audit Handoff Materials Updated** | ✅ PASS | Updated `EXTERNAL_AUDIT_HANDOFF_MANIFEST.md`, `EXTERNAL_AUDIT_HANDOFF_CHECKLIST.md`, `SECURITY_AUDIT_PACKAGE_INDEX.md`, `BINARY_PROVENANCE_AND_HASHES.md`, and `S53_RELEASE_CANDIDATE_INTEGRITY_REPORT.md`. |
+| **Portable Audit Archive Created** | ✅ PASS | Generated `mediator-audit-candidate-v0.1.0-beta.1.post1.zip` excluding `.git`, `node_modules`, dev caches, and machine scripts. Verified SHA-256 checksum file generated. |
+| **Security Governance Invariants** | ✅ PASS | S00 `NO-GO-AUTOEXEC` authoritative; Local Autopilot strictly `BLOCKED` fail-closed; Review-only V1 mode enforced; 14 devtooling vulnerabilities disclosed. |
+| **Audit Disposition & Distribution Barrier** | ✅ PASS | Maintained `PENDING_EXTERNAL_REVIEW`. Public distribution strictly blocked pending independent audit sign-off. S54 deferred. |
+| **Authoritative Exit Verdict** | ✅ PASS | **`PASS — IMMUTABLE AUDIT SNAPSHOT & REPRODUCIBLE HANDOFF COMPLETE`**. |
+
+---
 
 ---
 

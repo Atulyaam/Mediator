@@ -108,7 +108,7 @@ export class DoctorDiagnosticsService {
       osRelease: os.release(),
       nodeVersion: process.version,
       overallStatus,
-      autopilotPolicy: 'BLOCKED',
+      autopilotPolicy: this.core.getStateSnapshot().s00Decision === 'GO-GUARDED-AUTOPILOT' ? 'GUARDED_ISOLATED' : 'BLOCKED',
       checks,
       sanitized: true,
     };
@@ -381,16 +381,19 @@ export class DoctorDiagnosticsService {
 
   private checkAutopilotPolicy(): DiagnosticCheckItem {
     const state = this.core.getStateSnapshot();
+    const isGuarded = state.s00Decision === 'GO-GUARDED-AUTOPILOT';
     return {
       id: 'check-autopilot-policy',
       name: 'Local Autopilot Security Policy',
       category: 'autopilot',
       status: 'READY',
-      detail: `S00 NO-GO-AUTOEXEC invariant is ACTIVE and AUTHORITATIVE. Local Autopilot is strictly BLOCKED (${state.autopilotStatus.toUpperCase()}). Review-only V1 mode enforced fail-closed.`,
+      detail: isGuarded
+        ? `S00 GO-GUARDED-AUTOPILOT (ADR-031) is ACTIVE: Guarded Autopilot permitted strictly within isolated task worktrees with sandbox verification. Live workspace mutation remains strictly manual-review.`
+        : `S00 NO-GO-AUTOEXEC invariant is ACTIVE and AUTHORITATIVE. Local Autopilot is strictly BLOCKED (${state.autopilotStatus.toUpperCase()}). Review-only V1 mode enforced fail-closed.`,
       metadata: {
         s00Decision: state.s00Decision,
         autopilotCanRun: state.autopilotCanRun,
-        reviewOnly: true,
+        reviewOnly: !isGuarded,
       },
     };
   }

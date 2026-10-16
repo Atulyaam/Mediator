@@ -64,13 +64,32 @@ To maintain audit rigor, two candidate definitions are formally cataloged:
 - **Native Host Binary:** `mediator-native-host.exe` (SHA256: `87FCB9871267E210E80D85CD4241511924227D12913B200EC81098C7D0BCB584`, 90,250,240 bytes)
 - **Role:** The historical frozen baseline for v0.1.0-beta.1.
 
-### Candidate B — Operational Beta Working Tree (v0.1.0-beta.1.post1)
-- **Source Revision:** Working tree based on `c55177400bd399adf05578ad80f8268f1173e371` with:
+### Candidate B — Immutable Audit Snapshot (v0.1.0-beta.1.post1)
+- **Source Revision:** Dedicated branch `audit/v0.1.0-beta.1.post1` at commit **`228e974fc11ee0f1ce71939d4d3e038c82918a21`** (Parent: `c55177400bd399adf05578ad80f8268f1173e371`)
+- **Annotated Git Tag:** **`v0.1.0-beta.1.post1`**
+- **Changes from Baseline:**
   1. Windows NTFS file locking robustness fix in `packages/stage-store/src/stageStorage.ts`.
   2. 10 structured real-world beta qualification scenarios in `tests/s52StructuredBetaTrials.test.ts`.
-  3. Complete machine-readable SBOMs and sanitized audit handoff documentation.
+  3. Machine-readable SBOMs (CycloneDX & SPDX) and sanitized security audit handoff materials in `docs/security-audit-package/`.
 - **Native Host Binary:** **Identical** `mediator-native-host.exe` (SHA256: `87FCB9871267E210E80D85CD4241511924227D12913B200EC81098C7D0BCB584`, 90,250,240 bytes).
-- **Role:** Recommended target for independent security audit handoff because it includes the full test suite (1,074 tests passing) and audit manifest.
+- **Role:** Primary immutable audit target for independent security evaluation. All 57 test files (1,074 tests) pass 100% on this exact commit.
+
+---
+
+## 4.1 Provenance Verification vs Inferred Provenance
+
+To maintain strict audit integrity, this document explicitly distinguishes between **verified provenance** and **inferred provenance**:
+
+1. **Verified Provenance:**
+   - **Artifact Presence & Checksum:** The binary `packages/native-host/dist/mediator-native-host.exe` is verified on disk with cryptographic SHA-256 hash `87FCB9871267E210E80D85CD4241511924227D12913B200EC81098C7D0BCB584` and byte length of `90,250,240 bytes`.
+   - **Functional Verification:** The artifact runs directly against live stdin/stdout tests in `packages/native-host/src/packagedHost.test.ts` (3 tests pass), validating framing, origin enforcement, ping response, and stderr separation.
+   - **Monorepo Integration:** Passes all 32 native host security tests and all 1,074 monorepo tests.
+   - **Source Decoupling:** Static and dynamic inspection confirm that `@mediator/native-host` bundles only `@mediator/shared-contracts`, `@mediator/ipc-core`, `@mediator/protocol`, `@mediator/content-transfer`, `@mediator/persistence`, and `zod`. Edits to `stageStorage.ts` or test suites do not touch the native host package.
+
+2. **Inferred Provenance & Deterministic Rebuild Limitations:**
+   - **Build Process Recipe:** Packaging relies on Node.js Single Executable Application (SEA) using `postject` to inject `dist/sea-prep.blob` into a copy of `process.execPath` (`node.exe`).
+   - **Rebuild Non-Determinism:** Node.js SEA injection embeds the host Node binary's PE headers, timestamps, and ASLR base addresses. Bit-for-bit identical binary rebuilding from source across different machines is not deterministically guaranteed unless the identical host `node.exe` (Node v24.13.0 win32-x64 build) and injection toolchain state are used.
+   - **Auditor Provision:** The exact, verified binary artifact (`mediator-native-host.exe`) is bundled directly in the portable audit archive so that independent auditors can inspect the precise PE32+ executable without having to reconstruct the exact Node.js SEA build environment.
 
 ---
 

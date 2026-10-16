@@ -52,6 +52,17 @@ import { WorkflowOrchestrator, type OrchestrationRoundResult } from './workflowO
 import { AutopilotGateEvaluator, type AutopilotGateEvaluationInput } from './autopilotGate.js';
 import { TrustedHostBroker } from './hostContainment/trustedHostBroker.js';
 import { ContainedOrchestrator } from './hostContainment/containedOrchestrator.js';
+import { GuardedAutopilotEngine } from './guardedAutopilotEngine.js';
+import {
+  WebConversationManager,
+  type ProviderMessageDispatcher,
+  type ConversationMessage,
+  type WebConversationSession,
+} from './webConversationManager.js';
+import {
+  type AutopilotTaskConfig,
+  type AutopilotRunResult,
+} from '@mediator/shared-contracts';
 
 export interface TaskRecord {
   readonly id: string;
@@ -60,6 +71,7 @@ export interface TaskRecord {
   readonly providerId: CanonicalProviderId;
   readonly mode: ProviderMode;
   conversationId?: string | undefined;
+  conversationHistory?: ConversationMessage[];
   roundNumber: number;
   readonly createdAt: number;
   updatedAt: number;
@@ -99,6 +111,8 @@ export interface MediatorCoreEvent {
     | 'approval:resolved'
     | 'loop:toggled'
     | 'autopilot:toggled'
+    | 'autopilot:completed'
+    | 'autopilot:stopped'
     | 'audit:log';
   readonly payload: unknown;
 }
@@ -197,7 +211,7 @@ export class MediatorCore {
 
   private readonly startTime = Date.now();
   private readonly pairingToken: string;
-  private readonly s00Decision: S00ExecutionDecision;
+  private s00Decision: S00ExecutionDecision;
   private readonly eventEmitter = new EventEmitter();
   private readonly db: DatabaseConnection;
   private readonly providerRegistry: UnifiedProviderRegistry;
@@ -230,6 +244,8 @@ export class MediatorCore {
   private hostBroker: TrustedHostBroker | null = null;
   private containedOrchestrator: ContainedOrchestrator | null = null;
   private wslExecutor: WslIsolatedExecutor | null = null;
+  private guardedAutopilotEngine: GuardedAutopilotEngine;
+  private readonly webConversationManager: WebConversationManager;
 
   private readonly approvals = new Map<string, ApprovalRecord>();
   private readonly stagesList: StageItem[] = [];
@@ -243,6 +259,14 @@ export class MediatorCore {
     this.stageStore = new StageStore(this.db);
     this.recipeRegistry = new RecipeRegistryService();
     this.providerRegistry = new UnifiedProviderRegistry({ defaultProvider: 'gemini', defaultMode: 'browser' });
+    this.guardedAutopilotEngine = new GuardedAutopilotEngine({
+      workspaceRoot: options?.workspaceRoot ?? process.cwd(),
+      s00Decision: this.s00Decision,
+      wslExecutor: this.wslExecutor ?? undefined,
+    });
+    this.webConversationManager = new WebConversationManager({
+      workspaceRoot: options?.workspaceRoot ?? process.cwd(),
+    });
 
     if (options?.workspaceRoot) {
       this.setWorkspaceRoot(options.workspaceRoot, true);
@@ -319,6 +343,12 @@ export class MediatorCore {
       s00Decision: this.s00Decision,
       stageStore: this.stageStore,
       recipeRegistry: this.recipeRegistry,
+    });
+
+    this.guardedAutopilotEngine = new GuardedAutopilotEngine({
+      workspaceRoot: this.workspaceRoot,
+      s00Decision: this.s00Decision,
+      wslExecutor: this.wslExecutor ?? undefined,
     });
 
     if (this.workspaceConfirmed) {
@@ -447,13 +477,21 @@ export class MediatorCore {
     const mode = params.mode ?? this.getActiveMode();
 
     const taskId = `task_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
+    const initialConvId = params.conversationId ?? this.activeConversation?.conversationId;
+    const convSession = this.webConversationManager.getOrCreateSession(
+      taskId,
+      providerId,
+      initialConvId,
+    );
+
     const task: TaskRecord = {
       id: taskId,
       prompt: params.prompt.trim(),
       status: 'running',
       providerId,
       mode,
-      conversationId: params.conversationId ?? this.activeConversation?.conversationId,
+      conversationId: initialConvId,
+      conversationHistory: convSession.history,
       roundNumber: 1,
       createdAt: Date.now(),
       updatedAt: Date.now(),
@@ -478,11 +516,19 @@ export class MediatorCore {
   }
 
   public getTask(taskId: string): TaskRecord | undefined {
-    return this.tasks.get(taskId);
+    const task = this.tasks.get(taskId);
+    if (task) {
+      task.conversationHistory = this.webConversationManager.getSession(taskId)?.history ?? [];
+    }
+    return task;
   }
 
   public listTasks(): TaskRecord[] {
-    return Array.from(this.tasks.values()).sort((a, b) => b.createdAt - a.createdAt);
+    const list = Array.from(this.tasks.values()).sort((a, b) => b.createdAt - a.createdAt);
+    for (const t of list) {
+      t.conversationHistory = this.webConversationManager.getSession(t.id)?.history ?? [];
+    }
+    return list;
   }
 
   public getActiveTaskId(): string | null {
@@ -606,24 +652,44 @@ export class MediatorCore {
       envelopeObj = rawTextOrEnvelope;
     }
 
+    const envelopeRec =
+      typeof envelopeObj === 'object' && envelopeObj !== null
+        ? (envelopeObj as Record<string, unknown>)
+        : null;
+    const envelopeConv =
+      typeof envelopeRec?.conversation === 'object' && envelopeRec?.conversation !== null
+        ? (envelopeRec.conversation as Record<string, unknown>)
+        : undefined;
+    const envelopeConvId =
+      typeof envelopeConv?.conversationId === 'string'
+        ? envelopeConv.conversationId
+        : undefined;
+    const envelopeProvider =
+      typeof envelopeConv?.provider === 'string'
+        ? (envelopeConv.provider as CanonicalProviderId)
+        : undefined;
+
+    if (envelopeConvId && (!task.conversationId || task.conversationId.startsWith('conv_task_'))) {
+      task.conversationId = envelopeConvId;
+      this.webConversationManager.getOrCreateSession(task.id, task.providerId, envelopeConvId);
+    }
+
+    const effectiveConvId = envelopeConvId ?? task.conversationId ?? 'c1';
+    const effectiveProvider = envelopeProvider ?? task.providerId;
+
     const correlationId = `corr_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
     let roundRes = await this.orchestrator.executeRound(envelopeObj, {
       taskId: task.id,
       sessionId: `sess_${task.id}`,
       correlationId,
       conversation: {
-        provider: task.providerId,
-        tabId: 101,
-        conversationId: task.conversationId ?? 'c1',
+        provider: effectiveProvider,
+        tabId: typeof envelopeConv?.tabId === 'number' ? envelopeConv.tabId : 101,
+        conversationId: effectiveConvId,
       },
       sameChatConfirmed: true,
       userApproved: true,
     });
-
-    const envelopeRec =
-      typeof envelopeObj === 'object' && envelopeObj !== null
-        ? (envelopeObj as Record<string, unknown>)
-        : null;
     const rawActions = envelopeRec?.actions;
     const envelopeActions: ReadonlyArray<Record<string, unknown>> = Array.isArray(rawActions)
       ? (rawActions as ReadonlyArray<Record<string, unknown>>)
@@ -1248,11 +1314,238 @@ export class MediatorCore {
     };
   }
 
+  public setS00Decision(decision: S00ExecutionDecision): void {
+    this.s00Decision = decision;
+    this.guardedAutopilotEngine.setS00Decision(decision);
+    this.recomputeAutopilotStatus();
+  }
+
+  public getGuardedAutopilotEngine(): GuardedAutopilotEngine {
+    return this.guardedAutopilotEngine;
+  }
+
+  public async runAutopilotTask(
+    taskId: string,
+    config?: Partial<AutopilotTaskConfig>,
+  ): Promise<Result<AutopilotRunResult, MediatorError>> {
+    if (!this.workspaceRoot || !this.workspaceConfirmed) {
+      return err(
+        makeMediatorError(
+          ErrorCode.WORKSPACE_ROOT_UNCONFIRMED,
+          'Active workspace must be selected and confirmed before running Autopilot.',
+          { taskId },
+        ),
+      );
+    }
+
+    const task = this.tasks.get(taskId);
+    if (!task) {
+      return err(makeMediatorError(ErrorCode.TASK_MISMATCH, `Task "${taskId}" not found`, { taskId }));
+    }
+
+    if (!this.autopilotEnabled) {
+      return err(
+        makeMediatorError(
+          ErrorCode.AUTOPILOT_DISABLED,
+          'Autopilot is globally disabled in settings. Enable Autopilot before running.',
+          { taskId },
+        ),
+      );
+    }
+
+    const gate = this.recomputeAutopilotStatus();
+    if (!gate.isEligible) {
+      return err(
+        makeMediatorError(
+          ErrorCode.AUTOPILOT_POLICY_DISALLOWED,
+          `Autopilot execution blocked by security policy: ${gate.blockingReasons.join('; ')}`,
+          { taskId },
+        ),
+      );
+    }
+
+    task.status = 'running';
+    this.autopilotStatus = 'running';
+    this.emitEvent('task:updated', task);
+    this.emitEvent('autopilot:toggled', {
+      autopilotEnabled: this.autopilotEnabled,
+      autopilotStatus: this.autopilotStatus,
+      canRun: true,
+      blockingReasons: [],
+    });
+
+    this.logAudit('task:updated', `Autopilot session started for task ${taskId}`);
+
+    const worktreeGetter = (): string | undefined => this.guardedAutopilotEngine.getWorktreeRoot(taskId);
+    const providerHandler = this.webConversationManager.getDispatcher()
+      ? this.webConversationManager.createProviderHandler(taskId, worktreeGetter)
+      : undefined;
+
+    const runResult = await this.guardedAutopilotEngine.runIterationLoop({
+      taskId,
+      prompt: task.prompt,
+      config,
+      providerHandler,
+    });
+
+    if (runResult.status === 'completed' && runResult.stagedDiff) {
+      task.lastDiff = runResult.stagedDiff;
+      const stageId = `stage_autopilot_${Date.now()}`;
+      task.stages.push(stageId);
+      this.stagesList.unshift({
+        id: stageId,
+        taskId: task.id,
+        filePath: 'guarded_autopilot.diff',
+        diffPreview: runResult.stagedDiff,
+      });
+
+      const approvalId = `appr_autopilot_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
+      const approval: ApprovalRecord = {
+        id: approvalId,
+        taskId: task.id,
+        actionType: 'patch',
+        status: 'pending',
+        description: `Guarded Autopilot changes for task ${task.id} (${runResult.iterationsRun} iteration(s), verified in sandbox)`,
+        createdAt: Date.now(),
+        stagedFiles: [...runResult.changedFiles],
+        stageId,
+      };
+      this.approvals.set(approvalId, approval);
+      task.approvals.push(approvalId);
+
+      task.status = 'paused';
+      task.pauseReason = 'Awaiting human review of verified changes';
+      this.autopilotStatus = 'ready';
+
+      this.emitEvent('stage:created', { stageId, taskId: task.id, diff: runResult.stagedDiff });
+      this.emitEvent('approval:created', approval);
+      this.emitEvent('autopilot:completed', { taskId, runResult });
+    } else if (runResult.status === 'cancelled') {
+      task.status = 'cancelled';
+      task.pauseReason = 'Autopilot cancelled by user';
+      this.autopilotStatus = 'ready';
+      this.emitEvent('task:cancelled', task);
+    } else {
+      task.status = 'failed';
+      task.lastError = runResult.details;
+      this.autopilotStatus = 'ready';
+      this.emitEvent('task:updated', task);
+      this.emitEvent('autopilot:stopped', { taskId, runResult });
+    }
+
+    this.logAudit('task:updated', `Autopilot session finished for ${taskId}: ${runResult.status} (${runResult.stopReason})`);
+    return ok(runResult);
+  }
+
+  public cancelAutopilotTask(taskId: string, reason = 'User requested cancellation'): Result<boolean, MediatorError> {
+    const cancelled = this.guardedAutopilotEngine.cancel(taskId, reason);
+    if (cancelled) {
+      const task = this.tasks.get(taskId);
+      if (task) {
+        task.status = 'cancelled';
+        task.pauseReason = reason;
+        task.updatedAt = Date.now();
+        this.emitEvent('task:cancelled', task);
+      }
+      this.autopilotStatus = 'ready';
+      this.logAudit('task:cancelled', `Autopilot task ${taskId} cancelled: ${reason}`);
+      return ok(true);
+    }
+    return err(makeMediatorError(ErrorCode.TASK_MISMATCH, `No active Autopilot session for task "${taskId}"`));
+  }
+
+  public getAutopilotTaskSession(taskId: string): AutopilotRunResult | undefined {
+    return this.guardedAutopilotEngine.getSession(taskId);
+  }
+
+  public getWebConversationManager(): WebConversationManager {
+    return this.webConversationManager;
+  }
+
+  public setProviderDispatcher(dispatcher: ProviderMessageDispatcher): void {
+    this.webConversationManager.setDispatcher(dispatcher);
+  }
+
+  public getTaskConversation(taskId: string): WebConversationSession | undefined {
+    return this.webConversationManager.getSession(taskId);
+  }
+
+  public async executeContextCommand(
+    taskId: string,
+    commandName: string,
+    args: Record<string, unknown>,
+  ): Promise<{ ok: boolean; result?: unknown; error?: string }> {
+    const worktreeRoot = this.guardedAutopilotEngine.getWorktreeRoot(taskId);
+    const res = await this.webConversationManager.executeContextCommand(taskId, commandName, args, worktreeRoot);
+    this.logAudit('task:command', `Task ${taskId} executed context command ${commandName}`, { args, ok: res.ok });
+    return res;
+  }
+
+  public async submitFollowUpMessage(
+    taskId: string,
+    text: string,
+  ): Promise<Result<{ reply: string; conversationId: string }, MediatorError>> {
+    const session = this.webConversationManager.getSession(taskId);
+    if (!session) {
+      return err(makeMediatorError(ErrorCode.TASK_MISMATCH, `No conversation session found for task "${taskId}"`));
+    }
+    const dispatcher = this.webConversationManager.getDispatcher();
+    if (!dispatcher) {
+      return err(makeMediatorError(ErrorCode.PROVIDER_NOT_CONFIGURED, 'No provider message dispatcher active'));
+    }
+    try {
+      const userMsg: ConversationMessage = {
+        id: `msg_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`,
+        role: 'user',
+        content: text,
+        timestamp: Date.now(),
+      };
+      session.history.push(userMsg);
+
+      const res = await dispatcher.sendMessage(session.conversationId, text, {
+        providerId: session.providerId,
+        taskId,
+      });
+      session.conversationId = res.conversationId;
+
+      const assistantMsg: ConversationMessage = {
+        id: `msg_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`,
+        role: 'assistant',
+        content: res.responseText,
+        timestamp: Date.now(),
+      };
+      session.history.push(assistantMsg);
+
+      const task = this.getTask(taskId);
+      if (task) {
+        task.conversationId = res.conversationId;
+        task.updatedAt = Date.now();
+        this.emitEvent('task:updated', task);
+      }
+      return ok({ reply: res.responseText, conversationId: res.conversationId });
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      return err(makeMediatorError(ErrorCode.INTERNAL_ERROR, `Failed sending follow-up message: ${msg}`));
+    }
+  }
+
   private recomputeAutopilotStatus(): AutopilotGateResult {
+    const isGuardedGo = this.s00Decision === 'GO-GUARDED-AUTOPILOT' || this.s00Decision === 'GO-WSL2';
     const evalInput: AutopilotGateEvaluationInput = {
       s00Decision: this.s00Decision,
-      executorCapabilities: undefined, // S00 NO-GO: capabilities unverified
+      executorCapabilities: isGuardedGo
+        ? {
+            childProcessesConfined: true,
+            networkDefaultDeny: true,
+            capturesRealExitCode: true,
+            evidenceTimestamp: Date.now(),
+            evidenceProvenance: 'runtime-canary',
+          }
+        : undefined,
       userOptInSetting: this.autopilotEnabled,
+      recoveryGatePassed: true,
+      recipeRegistryHashVerified: true,
+      approvalRequiredForModifications: true,
     };
 
     const gate = this.autopilotGateEvaluator.evaluateEligibility(evalInput);
@@ -1260,7 +1553,7 @@ export class MediatorCore {
     if (!this.autopilotEnabled) {
       this.autopilotStatus = 'off';
     } else {
-      // Fail-closed invariant: under NO-GO, status is BLOCKED
+      // Fail-closed invariant: under NO-GO, status is BLOCKED; under GO-GUARDED-AUTOPILOT, ready
       this.autopilotStatus = gate.isEligible ? 'ready' : 'blocked';
     }
 

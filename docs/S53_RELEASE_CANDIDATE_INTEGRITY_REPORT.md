@@ -182,3 +182,34 @@ The complete handoff package has been assembled and cataloged:
 2. **Preserve Candidate Freeze:** Maintain Candidate B as the frozen audit target. Do not make speculative or cosmetic code edits.
 3. **Public Distribution Remains Blocked:** Public distribution is strictly blocked until the independent auditor completes their evaluation and provides formal sign-off.
 4. **Do Not Begin S54:** Do not start Sprint S54 until external audit results are returned or the operator provides explicit instruction.
+
+---
+
+## 10. Sprint S53.1 Addendum: Immutable Audit Snapshot & Reproducible Handoff Resolution
+
+In Sprint S53.1, Candidate B was successfully transitioned from an uncommitted working tree into an immutable, verifiable, and reproducible audit snapshot without altering the original working tree or modifying the frozen baseline `c55177400bd399adf05578ad80f8268f1173e371`:
+
+1. **Change Classification:** All 297 changed files between baseline `c551774` and working tree were inspected and classified:
+   - **Category 1 (Candidate Source):** 149 files (monorepo packages and apps)
+   - **Category 2 (Candidate Test & Docs):** 108 files (test suites and architectural ADRs)
+   - **Category 3 (Audit Evidence & Artifacts):** 13 files (SBOMs, manifests, checklists, reports)
+   - **Category 4 (Local Environment & Ad-Hoc Scripts):** 27 diagnostic scripts containing local user paths (excluded from audit commit)
+   - **Category 5 (Unclear Ownership):** 0 files.
+2. **Immutable Commit & Tag:**
+   - Dedicated branch created: `audit/v0.1.0-beta.1.post1`
+   - Exact commit SHA: **`228e974fc11ee0f1ce71939d4d3e038c82918a21`** (Parent: `c55177400bd399adf05578ad80f8268f1173e371`)
+   - Annotated tag: **`v0.1.0-beta.1.post1`**
+3. **Quality Gates on Exact Commit:**
+   - `npm ci`: PASS (0 errors, 14 devtooling vulnerabilities documented)
+   - `npm run lint`: PASS (0 errors, 0 warnings)
+   - `npm run typecheck`: PASS (0 errors)
+   - `npm run build`: PASS (0 errors)
+   - `node apps/cli/dist/index.js doctor`: PASS (11/11 [READY], HEALTHY)
+   - Native Host Security: PASS (3 test files, 32 passed)
+   - Provider & Browser Core: PASS (7 test files, 158 passed)
+   - Full Regression: PASS (**57 test files, 1,074 passed, 100% PASS**, 0 failures, 99.58s)
+4. **Binary Provenance Verified:**
+   - `packages/native-host/dist/mediator-native-host.exe` independently verified: SHA-256 `87FCB9871267E210E80D85CD4241511924227D12913B200EC81098C7D0BCB584`, 90,250,240 bytes.
+   - Clear distinction between verified provenance (artifact integrity & decoupling) and inferred provenance (Node.js SEA packaging limitations) established in documentation.
+5. **Portable Audit Archive:** Generated clean archive `mediator-audit-candidate-v0.1.0-beta.1.post1.zip` excluding `.git` and dev caches, with independent SHA-256 checksum file.
+6. **Sprint S53.1 Final Determination:** **`PASS`**. Audit handoff is complete and ready for third-party security delivery. S54 remains deferred.

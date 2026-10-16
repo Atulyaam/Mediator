@@ -114,11 +114,15 @@ export const ErrorCode = {
   DEBUG_BUNDLE_EXPORT_REFUSED: 'DEBUG_BUNDLE_EXPORT_REFUSED',
   DEBUG_BUNDLE_OVERSIZED: 'DEBUG_BUNDLE_OVERSIZED',
 
-  // Autopilot Gate (S26)
+  // Autopilot Gate & Execution (S26 / ADR-031)
   AUTOPILOT_DISABLED: 'AUTOPILOT_DISABLED',
   AUTOPILOT_DEFERRED: 'AUTOPILOT_DEFERRED',
   AUTOPILOT_CAPABILITY_REVOKED: 'AUTOPILOT_CAPABILITY_REVOKED',
   AUTOPILOT_POLICY_DISALLOWED: 'AUTOPILOT_POLICY_DISALLOWED',
+  AUTOPILOT_STOP_SECURITY_VIOLATION: 'AUTOPILOT_STOP_SECURITY_VIOLATION',
+  AUTOPILOT_BUDGET_EXHAUSTED: 'AUTOPILOT_BUDGET_EXHAUSTED',
+  AUTOPILOT_WORKTREE_ISOLATION_FAILED: 'AUTOPILOT_WORKTREE_ISOLATION_FAILED',
+  AUTOPILOT_ITERATION_FAILED: 'AUTOPILOT_ITERATION_FAILED',
 
   // MCP / Scope
   MCP_MUTATION_PROHIBITED: 'MCP_MUTATION_PROHIBITED',
@@ -1114,6 +1118,7 @@ export function isExecutorSufficientForAutoExec(cap: ExecutorCapability): boolea
 export const S00ExecutionDecisionValues = {
   GO_IDE: 'GO-IDE',
   GO_WSL2: 'GO-WSL2',
+  GO_GUARDED_AUTOPILOT: 'GO-GUARDED-AUTOPILOT',
   NO_GO_AUTOEXEC: 'NO-GO-AUTOEXEC',
 } as const;
 
@@ -1125,6 +1130,7 @@ export type S00ExecutionDecision =
 export const S00ExecutionDecisionSchema = z.enum([
   'GO-IDE',
   'GO-WSL2',
+  'GO-GUARDED-AUTOPILOT',
   'NO-GO-AUTOEXEC',
 ]);
 
@@ -1880,7 +1886,7 @@ export interface AutopilotLowRiskProfile {
   readonly approvedRecipeIds: readonly RecipeId[];
   readonly maxRoundsBudget: number;
   readonly maxDurationBudgetMs: number;
-  readonly active: false; // strictly false under NO-GO-AUTOEXEC
+  readonly active: boolean; // false under NO-GO-AUTOEXEC; true when guarded profile active
 }
 
 export const CANONICAL_AUTOPILOT_LOW_RISK_PROFILE: AutopilotLowRiskProfile = {
@@ -1901,6 +1907,69 @@ export const CANONICAL_AUTOPILOT_LOW_RISK_PROFILE: AutopilotLowRiskProfile = {
   maxDurationBudgetMs: 300000,
   active: false,
 };
+
+// ─── Guarded Isolated-Worktree Autopilot Contracts (ADR-031 / Phase D) ─────
+
+export type AutopilotStopReason =
+  | 'SUCCESS'
+  | 'BUDGET_EXHAUSTED_ITERATIONS'
+  | 'BUDGET_EXHAUSTED_TIMEOUT'
+  | 'CONSECUTIVE_FAILURES_EXCEEDED'
+  | 'SECURITY_VIOLATION'
+  | 'SANDBOX_UNAVAILABLE'
+  | 'MALFORMED_PROPOSAL'
+  | 'CANCELLED'
+  | 'CRASH_RECOVERY';
+
+export interface AutopilotTaskConfig {
+  readonly enabled: boolean;
+  readonly maxIterations: number;
+  readonly maxDurationMs: number;
+  readonly maxChangedFiles: number;
+  readonly maxDiffSizeBytes: number;
+  readonly maxConsecutiveFailures: number;
+  readonly validationRecipeId: RecipeId;
+  readonly isolatedWorktreeRoot?: string | undefined;
+}
+
+export const DEFAULT_AUTOPILOT_TASK_CONFIG: AutopilotTaskConfig = {
+  enabled: false,
+  maxIterations: 5,
+  maxDurationMs: 600000, // 10 minutes
+  maxChangedFiles: 10,
+  maxDiffSizeBytes: 65536, // 64 KiB
+  maxConsecutiveFailures: 3,
+  validationRecipeId: 'project.test',
+};
+
+export interface AutopilotIterationReport {
+  readonly iterationNumber: number;
+  readonly status: 'routing' | 'staging' | 'validating' | 'correcting' | 'completed' | 'failed' | 'stopped';
+  readonly validation?: {
+    readonly recipeId: string;
+    readonly exitCode: number;
+    readonly passed: boolean;
+    readonly stdoutSnippet: string;
+    readonly stderrSnippet: string;
+    readonly durationMs: number;
+  } | undefined;
+  readonly changedFiles: readonly string[];
+  readonly timestamp: number;
+  readonly note?: string | undefined;
+}
+
+export interface AutopilotRunResult {
+  readonly taskId: string;
+  readonly status: 'completed' | 'stopped' | 'failed' | 'cancelled';
+  readonly iterationsRun: number;
+  readonly stopReason: AutopilotStopReason;
+  readonly details: string;
+  readonly changedFiles: readonly string[];
+  readonly stagedDiff?: string | undefined;
+  readonly approvalId?: string | undefined;
+  readonly iterationReports: readonly AutopilotIterationReport[];
+  readonly durationMs: number;
+}
 
 
 // ─── Session priming ───────────────────────────────────────────────────────
@@ -2214,7 +2283,7 @@ export interface PlatformDiagnosticsReport {
   readonly osRelease: string;
   readonly nodeVersion: string;
   readonly overallStatus: 'HEALTHY' | 'DEGRADED' | 'UNHEALTHY';
-  readonly autopilotPolicy: 'BLOCKED';
+  readonly autopilotPolicy: 'BLOCKED' | 'GUARDED_ISOLATED';
   readonly checks: readonly DiagnosticCheckItem[];
   readonly sanitized: boolean;
 }
@@ -2247,7 +2316,7 @@ export const PlatformDiagnosticsReportSchema = z.object({
   osRelease: z.string().min(1),
   nodeVersion: z.string().min(1),
   overallStatus: z.enum(['HEALTHY', 'DEGRADED', 'UNHEALTHY']),
-  autopilotPolicy: z.literal('BLOCKED'),
+  autopilotPolicy: z.enum(['BLOCKED', 'GUARDED_ISOLATED']),
   checks: z.array(DiagnosticCheckItemSchema),
   sanitized: z.boolean(),
 });

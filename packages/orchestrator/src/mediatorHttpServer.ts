@@ -315,6 +315,58 @@ export class MediatorHttpServer {
         }
         break;
 
+      case '/api/autopilot/run':
+        if (req.method === 'POST') {
+          const body = await this.readJsonBody(req);
+          const taskId = typeof body.taskId === 'string' ? body.taskId : undefined;
+          if (!taskId) {
+            this.sendJson(res, 400, {
+              ok: false,
+              error: { code: 'MISSING_TASK_ID', message: 'Missing taskId in request body' },
+            });
+            return;
+          }
+          const config = typeof body.config === 'object' && body.config !== null ? body.config : undefined;
+          const runRes = await this.core.runAutopilotTask(taskId, config);
+          if (!runRes.ok) {
+            this.sendJson(res, 400, { ok: false, error: runRes.error });
+          } else {
+            this.sendJson(res, 200, { ok: true, result: runRes.value });
+          }
+        } else {
+          this.sendJson(res, 405, {
+            ok: false,
+            error: { code: 'METHOD_NOT_ALLOWED', message: 'Method Not Allowed' },
+          });
+        }
+        break;
+
+      case '/api/autopilot/cancel':
+        if (req.method === 'POST') {
+          const body = await this.readJsonBody(req);
+          const taskId = typeof body.taskId === 'string' ? body.taskId : undefined;
+          const reason = typeof body.reason === 'string' ? body.reason : undefined;
+          if (!taskId) {
+            this.sendJson(res, 400, {
+              ok: false,
+              error: { code: 'MISSING_TASK_ID', message: 'Missing taskId in request body' },
+            });
+            return;
+          }
+          const cancelRes = this.core.cancelAutopilotTask(taskId, reason);
+          if (!cancelRes.ok) {
+            this.sendJson(res, 400, { ok: false, error: cancelRes.error });
+          } else {
+            this.sendJson(res, 200, { ok: true, cancelled: true });
+          }
+        } else {
+          this.sendJson(res, 405, {
+            ok: false,
+            error: { code: 'METHOD_NOT_ALLOWED', message: 'Method Not Allowed' },
+          });
+        }
+        break;
+
       case '/api/logs':
         this.sendJson(res, 200, { ok: true, logs: this.core.getAuditLogs() });
         break;
@@ -455,6 +507,41 @@ export class MediatorHttpServer {
         this.sendJson(res, 400, { ok: false, error: valRes.error });
       } else {
         this.sendJson(res, 200, { ok: true, validation: valRes.value });
+      }
+    } else if (action === 'conversation') {
+      const conv = this.core.getTaskConversation(taskId);
+      this.sendJson(res, 200, { ok: true, conversation: conv });
+    } else if (action === 'message' && req.method === 'POST') {
+      const body = await this.readJsonBody(req);
+      const text = typeof body.message === 'string' ? body.message : '';
+      if (!text.trim()) {
+        this.sendJson(res, 400, { ok: false, error: { code: 'MISSING_MESSAGE', message: 'Message text is required' } });
+        return;
+      }
+      const msgRes = await this.core.submitFollowUpMessage(taskId, text);
+      if (!msgRes.ok) {
+        this.sendJson(res, 400, { ok: false, error: msgRes.error });
+      } else {
+        this.sendJson(res, 200, { ok: true, reply: msgRes.value.reply, conversationId: msgRes.value.conversationId });
+      }
+    } else if (action === 'command' && req.method === 'POST') {
+      const body = await this.readJsonBody(req);
+      const commandName = typeof body.command === 'string' ? body.command : '';
+      const args = typeof body.args === 'object' && body.args !== null ? (body.args as Record<string, unknown>) : {};
+      const cmdRes = await this.core.executeContextCommand(taskId, commandName, args);
+      if (!cmdRes.ok) {
+        this.sendJson(res, 400, { ok: false, error: cmdRes.error });
+      } else {
+        this.sendJson(res, 200, { ok: true, result: cmdRes.result });
+      }
+    } else if (action === 'autopilot' && req.method === 'POST') {
+      const body = await this.readJsonBody(req);
+      const config = typeof body.config === 'object' && body.config !== null ? body.config : undefined;
+      const autoRes = await this.core.runAutopilotTask(taskId, config);
+      if (!autoRes.ok) {
+        this.sendJson(res, 400, { ok: false, error: autoRes.error });
+      } else {
+        this.sendJson(res, 200, { ok: true, result: autoRes.value });
       }
     } else {
       this.sendJson(res, 404, {

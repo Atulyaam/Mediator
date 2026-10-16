@@ -32,13 +32,17 @@ This audit package provides independent security reviewers with complete archite
 ## 2. Cryptographic Candidate Identity
 
 ```
-Target Binary: packages/native-host/dist/mediator-native-host.exe
-File Size:     90,250,240 bytes (~86.07 MiB)
-SHA-256 Hash:  87FCB9871267E210E80D85CD4241511924227D12913B200EC81098C7D0BCB584
-Packager:      Node.js Single Executable Application (SEA) via esbuild + postject
-Host Runtime:  Node.js v24.13.0 on Windows (x86_64 PE32+ console)
-Source Commit: c55177400bd399adf05578ad80f8268f1173e371
-Candidate:     Candidate B (v0.1.0-beta.1.post1 - Working tree with NTFS EPERM fix & S52 trials)
+Target Binary:    packages/native-host/dist/mediator-native-host.exe
+File Size:        90,250,240 bytes (~86.07 MiB)
+SHA-256 Hash:     87FCB9871267E210E80D85CD4241511924227D12913B200EC81098C7D0BCB584
+Packager:         Node.js Single Executable Application (SEA) via esbuild + postject
+Host Runtime:     Node.js v24.13.0 on Windows (x86_64 PE32+ console)
+Baseline Commit:  c55177400bd399adf05578ad80f8268f1173e371 (v0.1.0-beta.1)
+Candidate Commit: 228e974fc11ee0f1ce71939d4d3e038c82918a21
+Git Branch:       audit/v0.1.0-beta.1.post1
+Annotated Tag:    v0.1.0-beta.1.post1
+Candidate:        Candidate B (v0.1.0-beta.1.post1 - Immutable Audit Snapshot)
+Quality Gates:    1,074/1,074 tests passing (100%), 0 lint errors, 0 typecheck errors
 ```
 
 ---

@@ -1,0 +1,77 @@
+{
+  "releaseCandidate": "v0.1.0-rc.1",
+  "timestamp": "2026-10-14T05:45:50.752Z",
+  "targetPlatform": "Windows 10/11 x64 (Standard User, Medium Integrity)",
+  "git": {
+    "commit": "c8a0a4381d982614b0e72cc9b4df1a5fd16d94f4",
+    "branch": "release/v0.1.0-rc.1",
+    "tag": "v0.1.0-rc.1"
+  },
+  "securityPolicy": {
+    "governanceInvariant": "ADR-031 GO-GUARDED-AUTOPILOT",
+    "localAutopilotScope": "Isolated Task Worktree (.mediator/task-worktrees/<taskId>)",
+    "liveWorkspaceWrites": "BLOCKED_PENDING_HUMAN_APPROVAL",
+    "networkIsolation": "CLONE_NEWNET (WSL2 MediatorSandbox)",
+    "externalSecurityAuditStatus": "PENDING_EXTERNAL_REVIEW"
+  },
+  "qualityGates": {
+    "lintErrors": 0,
+    "typecheckErrors": 0,
+    "testSuitesPassed": 58,
+    "totalTestsPassed": 1088,
+    "doctorStatus": "HEALTHY (11/11 READY)"
+  },
+  "distributionScope": {
+    "inScope": [
+      "Mediator Core & Orchestration Engine",
+      "Standalone Local UI (127.0.0.1:4100)",
+      "CLI (apps/cli)",
+      "Guarded Autopilot (Isolated Worktree ADR-031)",
+      "Chromium Native Messaging Host (Node.js SEA)",
+      "Windows Current-User Installation Scripts (HKCU)",
+      "Atomic Staged Diff Review, Backups & Rollbacks"
+    ],
+    "outOfScopeDeferred": [
+      "Chrome Extension Store Publication (.crx)",
+      "Microsoft Edge Extension Store Publication (.zip)",
+      "VS Code / IDE Marketplace Extension (.vsix)",
+      "Public Cloud Service or Web Hosting Deployment"
+    ]
+  },
+  "artifacts": [
+    {
+      "name": "mediator-v0.1.0-rc.1-windows-x64.zip",
+      "relativePath": "mediator-v0.1.0-rc.1-windows-x64.zip",
+      "sizeBytes": 33663306,
+      "sha256": "17A85070E9A6429E5979DD49F38FFD595DAAE00BB92FC26498AA69A9A8590257",
+      "format": "ZIP (Deflate)",
+      "description": "Portable Release Candidate distribution bundle for Windows 10/11 x64"
+    },
+    {
+      "name": "mediator-native-host.exe",
+      "relativePath": "packages/native-host/dist/mediator-native-host.exe",
+      "sizeBytes": 90250240,
+      "sha256": "87FCB9871267E210E80D85CD4241511924227D12913B200EC81098C7D0BCB584",
+      "format": "PE32+ executable (Node.js SEA v24.13.0 win32-x64)",
+      "description": "Chromium Native Messaging Host binary for local IPC bridge"
+    },
+    {
+      "name": "sbom.cyclonedx.json",
+      "relativePath": "docs/security-audit-package/sbom.cyclonedx.json",
+      "sizeBytes": 611136,
+      "sha256": "B412D6187E1AC25CC97995092BA84213116B7A3F4F5F259AD249480425DEAF43",
+      "format": "CycloneDX JSON v1.5",
+      "description": "Software Bill of Materials"
+    },
+    {
+      "name": "sbom.spdx.json",
+      "relativePath": "docs/security-audit-package/sbom.spdx.json",
+      "sizeBytes": 738248,
+      "sha256": "42F10119604ACF47A5DA7A2C84801A10D6951C760DDEAA5A91017E04A5C485E8",
+      "format": "SPDX JSON v2.3",
+      "description": "Software Bill of Materials"
+    }
+  ],
+  "releaseVerdict": "LIMITED_PREVIEW_READY / PERSONAL_BETA_READY",
+  "publicReleaseBlockedReason": "Mandatory independent external security penetration audit is pending external review."
+}

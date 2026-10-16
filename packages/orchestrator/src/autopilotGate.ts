@@ -166,6 +166,20 @@ export class AutopilotGateEvaluator {
   }
 
   /**
+   * Returns the guarded isolated-worktree Autopilot profile under GO-GUARDED-AUTOPILOT (ADR-031).
+   */
+  public getGuardedProfile(): AutopilotLowRiskProfile {
+    return {
+      ...CANONICAL_AUTOPILOT_LOW_RISK_PROFILE,
+      profileId: 'autopilot.guarded_worktree.v1',
+      version: '1.1.0',
+      maxRoundsBudget: 5,
+      maxDurationBudgetMs: 600000,
+      active: true,
+    };
+  }
+
+  /**
    * Fail-closed revocation: checks if any runtime signal revokes Autopilot eligibility.
    */
   public checkImmediateRevocation(signals: {

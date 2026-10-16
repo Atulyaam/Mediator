@@ -1040,7 +1040,7 @@
         body: JSON.stringify({
           prompt,
           providerId: dom.taskProviderSelect ? dom.taskProviderSelect.value : state.activeProviderId,
-          mode: dom.taskModeSelect ? dom.taskModeSelect.value : state.activeMode,
+          mode: dom.taskModeSelect ? dom.taskModeSelect.value : 'browser',
         }),
       });
 

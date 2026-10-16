@@ -5,8 +5,7 @@
   "description": "Mediator — personal AI-to-workspace bridge. TypeScript-first, local-first, fail-closed.",
   "workspaces": [
     "apps/*",
-    "packages/*",
-    "packages/provider-adapters/*"
+    "packages/*"
   ],
   "scripts": {
     "build": "tsc -b",
